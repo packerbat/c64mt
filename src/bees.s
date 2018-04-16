@@ -1,7 +1,7 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.import INIT, HGR, NRM, CLS
+.import INITT, SETDBT, SWAPSCRT
 
 .segment "CODE"
     .org $0801
@@ -12,12 +12,21 @@
     .asciiz "(2063)"  ;SYS argument
     .word 0           ;wskaźnik na następną linię, $0000 oznacza, że jest to ostania linia
 
-    jsr INIT
-    jsr NRM
-    lda #$01     ;białe litery na czarnym tle
-    ldx #$5C     ;strona pamięci koloru
-    jsr CLS
+    lda #0
+    jsr SETDBT        ;turn off double buffer
+    jsr INITT
 
-
-:   nop
+:   jsr DRAW_SCEEN
+    jsr SWAPSCRT
     jmp :-
+
+.proc DRAW_SCEEN
+    ldx #0
+    ldy #0
+:   nop         ;65536 * 2 cycles
+    dex         ;65536 * 2 cycles
+    bne :-      ;(65536-256) * 3 cycles + 256 * 2 cycles)
+    dey         ;256 * 2 cycles
+    bne :-      ;255 * 3 cycles + 2 cycles
+    rts         ;powrót po 65536*4+65536*3-256+256*2+256*3-1=459775, powinno się zmieniać co 0.5 sekundy a chyba jest rzadziej.
+.endproc

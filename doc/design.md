@@ -123,24 +123,30 @@ platforma testowa. Zalety to:
 7. wygodna kompilacja programów dzięki kroskopilatorowi [cc65](https://www.cc65.org),
 8. kompletny emulator o nazwie [VICE](http://vice-emu.sourceforge.net) w pełni zgodny ze sprzętem.
 
-Mapa pamięci będzie zrobiona na wyrost:
+Mapa pamięci będzie zrobiona na wyrost będzie uwzględniała możliwość użycia techniki *double buffer*.
+Z tego powodu trzeba osobno zaprojektować mapę dla trybu tekstowego i trybu wysokie rozdzielczości.
+
+W trybie tekstowym ekran zajmuje zaledwie 1 KB więc można zrobić
+technikę podwójnego buforowania w ramach jednego banku pamięci. Niestety
+pamięć kolorów jest wspólna dla wszystkich ekranów tekstowych (bez względu na bank pamięci)
+i znajduje się pod adresem $D800. Innymi słowy nie da się zrobić pełnego podwójnego buforowania
+w trybie tekstowym, bo pamięć kolorów trzeba będzie zaktualizować tuż przez przełączeniem
+ekranów. Wskaźniki na sprite trzeba zawsze programować podwójnie: te same adresy pod
+$63F8-$63FF i pod $67F8-$67FF.
 
     $0000-$00FF - 256 bajtów "zero page"
     $0100-$01FF - 256 bajtów stosu
     $0200-$07FF - obszar na zmienne niezainicjowane
     $0800-$3FFF - 14 KB na programy
     $4000-$7FFF - 16 KB pierwszy bank wideo
-       $4000-$47FF - czcionki trybu textowego
-       $4800-$5BFF - miejsce na 80 sprity po 64 bajty
-       $5C00-$5FF7 - ekran tekstowy albo kolor ekranu wysokiej rozdzielczości
-       $5FF8-$5FFF - 8 wskaźników na definicje spritów
-       $6000-$7FFF - ekran graficzny wysokiej rozdzielczości
-    $8000-$BFFF - 16 KB drugi bank wideo
-       $8000-$87FF - czcionki trybu textowego
-       $8800-$9BFF - miejsce na 80 sprity po 64 bajty
-       $9C00-$9FF7 - ekran tekstowy albo kolor ekranu wysokiej rozdzielczości
-       $9FF8-$9FFF - 8 wskaźników na definicje spritów 
-       $A000-$BFFF - ekran graficzny wysokiej rozdzielczości
+       $4000-$47FF - programowalne czcionki trybu tekstowego
+       $4800-$5FFF - unused
+       $6000-$63F7 - ekran tekstowy nr 1
+       $63F8-$63FF - 8 wskaźników na definicje spritów
+       $6400-$67F7 - ekran tekstowy nr 2
+       $67F8-$67FF - 8 wskaźników na definicje spritów
+       $6800-$7FFF - miejsce na 96 spritów po 64 bajty
+    $8000-$BFFF - 16 KB drugi bank wideo, unused
     $C000-$CFFF - unused, in future space for Multitasking Kernel
     $D000-$DFFF - zewnętrzne urządzenia wejścia/wyjścia
     $E000-$FFF9 - KERNAL in RAM, practically not used, probably will by replaced by Multitasking Kernel.
@@ -148,8 +154,34 @@ Mapa pamięci będzie zrobiona na wyrost:
     $FFFC-$FFFD - Vector RESET
     $FFFE-$FFFF - Vector IRQ
 
-Jak widać VIC-II dostał połowę pamięci aby można było stosować technikę *double buffer*. Ta technika
-polega na rysowaniu następnej ramki w innym banku układu wideo niż obecnie oglądana ramka.
+W trybie wysokiej rozdzielczości nie można wykorzystać dwóch stron w ramach
+jednego banku pamięci bo to by oznaczało przerzucanie spritów między dwiema połowami banku.
+Tu trzeba przełączać banki. W obu bankach trzeba definiować te same sprity. Podobnie
+wskaźniki na sprity umieszczone na końcu pamięci kolorów muszą być identyczne w obu
+bankach
+
+    $0000-$00FF - 256 bajtów "zero page"
+    $0100-$01FF - 256 bajtów stosu
+    $0200-$07FF - obszar na zmienne niezainicjowane
+    $0800-$3FFF - 14 KB na programy
+    $4000-$7FFF - 16 KB pierwszy bank wideo
+       $4000-$43F7 - pamięć kolorów
+       $43F8-$43FF - 8 wskaźników na definicje spritów
+       $4400-$4FFF - miejsce na 48 spritów
+       $5000-$5FFF - czcionki do malowania w trybie wysokiej rozdzielczości
+       $6000-$7FFF - ekran graficzny wysokiej rozdzielczości
+    $8000-$BFFF - 16 KB drugi bank wideo
+       $8000-$83F7 - pamięć kolorów
+       $83F8-$83FF - 8 wskaźników na definicje spritów 
+       $8400-$8FFF - miejsce na 48 spritów
+       $9000-$9FFF - czcionki do malowania w trybie wysokiej rozdzielczości
+       $A000-$BFFF - ekran graficzny wysokiej rozdzielczości
+    $C000-$CFFF - unused, in future space for Multitasking Kernel
+    $D000-$DFFF - zewnętrzne urządzenia wejścia/wyjścia
+    $E000-$FFF9 - KERNAL in RAM, practically not used, probably will by replaced by Multitasking Kernel.
+    $FFFA-$FFFB - Vector NMI
+    $FFFC-$FFFD - Vector RESET
+    $FFFE-$FFFF - Vector IRQ
 
 Architektura Commodore 64 ma również wiele wad, które niezwykle utrudniają pisanie relokowalnych
 programów oraz pisanie programów wielozadaniowych:
