@@ -6,7 +6,7 @@ tyle niezależnych rzeczy jednocześnie: porusza się niezależnie kilka postaci
 się płynnie plansza gry, gra w tle muzyka, słychać efekty dźwiękowe jak eksplozje,
 szum silnika. Jak to możliwe?
 
-Oczywiście, gry nie były tak efektowne gdyby nie dwa potężne koprocesory:
+Oczywiście, gry nie byłyby tak efektowne gdyby nie dwa potężne koprocesory:
 
 1. układ graficzny VIC-II, który w tamtych czas zasługiwał na miano GPU,
 2. układ dźwiękowy SID, który śmiało można nazwać SPU.
@@ -16,7 +16,7 @@ przez główny procesor MOS 6510. A wszystko musi być perfekcyjnie zsynchronizo
 aby uzyskać efekt płynnego ruchy.
 
 A może współczesne techniki wielozadaniowości i przetwarzania równoległego coś by w tym
-względzie pomogły? Czy o ogóle napisanie wielozadaniowego systemu operacyjnego jest
+względzie pomogły? Czy w ogóle napisanie wielozadaniowego systemu operacyjnego jest
 możliwe na tak skromnym mikroprocesorze, który kompletnie nie ma żadnego wsparcia
 dla wielozadaniowości?
 
