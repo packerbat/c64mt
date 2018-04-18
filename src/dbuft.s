@@ -11,7 +11,7 @@ NRSLUP: .res 1
 SLUPKI:   .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 .segment "RODATA"
-KONCOWKI:  .byte 32,100,111,121,98,248,247,227
+KONCOWKI:  .byte 100,111,121,98,248,247,227,160
 
 .segment "CODE"
     .org $0801
@@ -24,7 +24,7 @@ KONCOWKI:  .byte 32,100,111,121,98,248,247,227
 
     jsr INITT
     lda #1
-    jsr SETDBT        ;turn off double buffer
+    jsr SETDBT        ;turn on double buffer
 
 :   jsr DRAW_SCEEN
     jsr SWAPSCRT
@@ -54,8 +54,8 @@ nastepny_slupek:
     lda NPTR
     pha
     ldy #0
-    cpx #8
-    bcc :++        ;czas na koncowke
+    cpx #9
+    bcc :++         ;czas na koncowke
     
 :   lda #160        ;spacja w inwersji
     sta (NPTR),y
@@ -70,11 +70,12 @@ nastepny_slupek:
     sec
     sbc #8
     tax
-    cpx #8          ;wciąż mamy całe bloczki 
+    cpx #9          ;wciąż mamy całe bloczki 
     bcs :-
 
-:   cpx #0          ;malowanie_koncowki X=0..7
+:   cpx #0          ;malowanie_koncowki X=0..8
     beq :+
+    dex
     lda KONCOWKI,x
     sta (NPTR),y
 
