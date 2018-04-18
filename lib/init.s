@@ -7,7 +7,7 @@
 .segment "DATA"
 IRQPRESC: .byte 30
 
-.segment "ZEROPAGE"
+.segment "ZEROPAGE":zeropage
 SRCPTR:   .res 2
 DSTPTR:   .res 2
 
@@ -23,24 +23,19 @@ DSTPTR:   .res 2
     lda #$33         ;turn on CHARACTER ROM at address $D000-DFFF
     sta $01
     lda #$D8
-    ldy #$50
+    ldy #$90
     ldx #16         ;=2KB
     jsr copy_pages
     lda #$35         ;turn off KERNAL ROM and BASIC ROM and CHRACTER ROM, do not remove I/O at $D000-$DFFF
     sta $01
     cli
 
-    lda #$50
-    ldy #$90
-    ldx #16         ;=2KB
-    jsr copy_pages
-
     jsr HGR
-    lda #$60
+    lda #$A0
     sta VIDPAGE
     lda #$FE          ;białe litery na czarnym tle
     jsr CLS
-    lda #$A0
+    lda #$60
     sta VIDPAGE
     lda #$FE          ;białe litery na czarnym tle
     jsr CLS

@@ -1,7 +1,10 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.import INITT, SETDBT, SWAPSCRT
+.import INITT, SETDBT, SWAPSCRT, CLST, TXTPAGE
+
+.segment "ZEROPAGE":zeropage
+NPTR:  .res 2
 
 .segment "CODE"
     .org $0801
@@ -13,20 +16,40 @@
     .word 0           ;wskaźnik na następną linię, $0000 oznacza, że jest to ostania linia
 
     jsr INITT
+    ;lda #1
+    ;jsr SETDBT        ;turn off double buffer
 
 :   jsr DRAW_SCEEN
     jsr SWAPSCRT
     jmp :-
 
 .proc DRAW_SCEEN
-    inc $6001
-    inc $6401
-    jsr WAIT
+    lda #$FE
+    jsr CLST
+
+    lda #0
+    sta NPTR
+    lda TXTPAGE
+    clc
+    adc #3
+    sta NPTR+1      ;będzie $6300 albo $6700
+    lda $A2         ;jiffy clock
+    and #$3F
+    ldx #4          ;4x256 = 1KB
+    ldy #$E8        ;rozmiar $03e8 = 1000
+:   dey
+    sta (NPTR),y
+    bne :-
+    dec NPTR+1
+    dex
+    bne :-
+
+    ;jsr WAIT
     rts
 .endproc
 
 .proc WAIT
-    ldx #0
+    ldx #1
     ldy #0
 :   nop         ;65536 * 2 cycles
     dex         ;65536 * 2 cycles

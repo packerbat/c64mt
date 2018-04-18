@@ -7,7 +7,7 @@
 ; output: A=modified, X=unchanged, Y=unchanged
 ; stack: 0
 ; zeropage: 0
-; reentrant: yes in real cases
+; reentrant: no
 
 .export SWAPSCR, VIDPAGE
 .import DBLBUF

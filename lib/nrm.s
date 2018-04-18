@@ -1,18 +1,23 @@
 ;------------------------------------
-; przywrócenie trybu tekstowego przy zablokowanych przerwaniach
-; na razie tylko BANK1
-; zmienia tylko A i flagi
-; input: DBLBUF
-; output: X=unchanged, Y=unchanged, VIDPAGE
+; ustawienie trybu tekstowego z potencjalną możliwością
+; niepełnego podwójnego buforowania
+;
+; pamięć $DD00, TXTPAGE i TXTDBLBUF powinny być zmieniane
+; atomowo a ta procedura o to nie dba.
+;
+; input: -
+; output: X=unchanged, Y=unchanged, TXTDBLBUF=0, TXTPAGE=$60
 ; stack: 0
 ; zeropage: 0
-; reentrant: yes
+; reentrant: no
 
 .export NRM
 .import TXTPAGE, TXTDBLBUF
 
 .segment "CODE"
 .proc NRM
+    lda #0
+    sta TXTDBLBUF
     lda $D011    ;VIC Control Register 1
     and #$df     ;Bit 5 = 0 Disable bitmap mode
     sta $D011    ;VIC Control Register 1
@@ -23,7 +28,6 @@
     ora #$02
     sta $DD00    ;CIA#2 Data Port A, grafika w banku 1
     lda #$60
-    eor TXTDBLBUF
     sta TXTPAGE
     rts
 .endproc

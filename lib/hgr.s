@@ -2,19 +2,22 @@
 ; przełącza VIC w tryb wysokiej rozdzielczości i ustawia BANK1
 ; ustawia również HGRPAGE na BANK2 (czyli niewidoczny)
 ;
-; pamięć $DD00 i HGRPAGE powinny być zmieniane atomowo a ta procedura o to nie dba
+; pamięć $DD00, VIDPAGE i DBLBUF powinny być zmieniane atomowo
+; a ta procedura o to nie dba.
 ;
-; input: DBLBUF
-; output: X=unchanged, Y=unchanged, VIDPAGE
+; input: -
+; output: X=unchanged, Y=unchanged, DBLBUF=0, VIDPAGE=$60
 ; stack: 0
 ; zeropage: 0
-; reentrant: yes in real cases
+; reentrant: no
 
 .export HGR
 .import VIDPAGE, DBLBUF
 
 .segment "CODE"
 .proc HGR
+    lda #0
+    sta DBLBUF
     lda $D011    ;VIC Control Register 1
     ora #$20     ;Bit 5 = 1 Enable bitmap mode
     sta $D011    ;VIC Control Register 1
@@ -25,7 +28,6 @@
     ora #$02
     sta $DD00    ;CIA#2 Data Port A, grafika w banku 1
     lda #$60
-    eor DBLBUF
     sta VIDPAGE
     rts
 .endproc

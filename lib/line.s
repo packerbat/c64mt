@@ -7,7 +7,7 @@
 ; output: XP=XK, YP=YK
 ;
 
-.export LINE
+.export LINE, XK, YK
 .import POT, XP, YP
 
 .segment "ZEROPAGE": zeropage
@@ -41,7 +41,7 @@ YK:    .word 0
     stx KX          ;KX = -1
     stx KX+1
     sec
-    lda XC
+    lda XP
     sbc XK
     sta DX
     lda XP+1

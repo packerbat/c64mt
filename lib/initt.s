@@ -7,7 +7,7 @@
 .segment "DATA"
 IRQPRESC: .byte 30
 
-.segment "ZEROPAGE"
+.segment "ZEROPAGE":zeropage
 SRCPTR:   .res 2
 DSTPTR:   .res 2
 
@@ -24,25 +24,20 @@ DSTPTR:   .res 2
     sta $01
     lda #$D8
     ldy #$40
-    ldx #16         ;=2KB
+    ldx #16          ;=2KB
     jsr copy_pages
     lda #$35         ;turn off KERNAL ROM and BASIC ROM and CHRACTER ROM, do not remove I/O at $D000-$DFFF
     sta $01
     cli
 
-    lda #$40
-    ldy #$80
-    ldx #16         ;=2KB
-    jsr copy_pages
-
     jsr NRM
+    lda #$64
+    sta TXTPAGE
+    lda #$FE          ;domyślne kolory C64 po włączeniu
+    jsr CLST
     lda #$60
     sta TXTPAGE
-    lda #$FE          ;białe litery na czarnym tle
-    jsr CLST
-    lda #$A0
-    sta TXTPAGE
-    lda #$FE          ;białe litery na czarnym tle
+    lda #$FE          ;domyślne kolory C64 po włączeniu
     jsr CLST
 
     lda #<IRQ
@@ -87,6 +82,6 @@ DSTPTR:   .res 2
     lda #30
     sta IRQPRESC
     inc $6000
-    inc $A000
+    inc $6400
 :   jmp $EA31       ;build-in request handler
 .endproc

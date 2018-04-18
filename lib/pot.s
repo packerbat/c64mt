@@ -6,7 +6,7 @@
 ; zmienne lokalne: AD
 ; input: XP, YP, PTYP, HGRPAGE
 
-.export POT
+.export POT, XP, YP, PTYP
 .import VIDPAGE
 
 .segment "ZEROPAGE": zeropage
@@ -31,13 +31,10 @@ YP:    .word 0
     sbc #1
     bcs nic_nie_rysuj       ;CF=1 when XP >= 320
 
-    ;--- oblicz: AD+1,AD = (YP \ 8) * 320,  Y = YP % 8
+    ;--- oblicz: AD+1,AD = (YP \ 8) * 320
     lda #0
     sta AD+1        ;AD+1 = 0
     lda YP
-    and #7
-    tay             ;Y = YP % 8             ;bajt w wierszu
-    txa
     and #$F8        ;A = YP \ 8 * 8         ;numer wiersza * 8
     sta AD          ;AD+1,AD = AD+1,A = (YP \ 8) * 8
     asl
@@ -55,9 +52,8 @@ YP:    .word 0
     rol AD+1
     sta AD          ;AD+1,AD = (YP \ 8) * 256 + (YP \ 8) * 64   czyli  YP*320
 
-    ;--- oblicz AD+1,AD = (YP \ 8) * 320 + (XP \ 8) * 8 + $4000,  A = XP % 8
+    ;--- oblicz AD+1,AD = (YP \ 8) * 320 + (XP \ 8) * 8 + $4000,  X = XP % 8,  Y = YP % 8
     lda XP
-    tax             ;przechowaj XP w X
     and #$F8        ;A = (XP \ 8) * 8
     adc AD
     sta AD
@@ -65,10 +61,13 @@ YP:    .word 0
     adc AD+1
     adc VIDPAGE
     sta AD+1
-    txa
+    lda XP
     and #7          ;A = XP % 8
-
     tax
+    lda YP
+    and #7
+    tay             ;Y = YP % 8             ;bajt w wierszu, on nie jest dodawany do adresu tylko uzywany jako indeks
+
     lda TBP,x       ;ukryte potęgowanie
     ldx PTYP        ;typ rysowania, 0 = neg/and (zgaś), 1 = or (zapal), 2 = xor (zaneguj)
     bne :+
