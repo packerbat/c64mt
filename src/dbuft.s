@@ -1,7 +1,7 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program dbuft
 
-.import INITT, SETDBT, SWAPSCRT, CLST, TXTPAGE
+.import INITT, SETDBT, SWAPSCRT, CLST, TXTPAGE, JiffyClock
 
 .segment "ZEROPAGE":zeropage
 NPTR:  .res 2
@@ -22,6 +22,9 @@ KONCOWKI:  .byte 100,111,121,98,248,247,227,160
     .asciiz "(2063)"  ;SYS argument
     .word 0           ;wskaźnik na następną linię, $0000 oznacza, że jest to ostania linia
 
+    ldx #$FF
+    txs
+    cld                 ; i nigdy więcej nie włączaj
     jsr INITT
     lda #1
     jsr SETDBT        ;turn on double buffer
@@ -105,7 +108,7 @@ slupek_namalowany:
     inx
     dey
     bne :-
-    lda $A2
+    lda JiffyClock
     lsr
     lsr
     sta SLUPKI,x

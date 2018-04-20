@@ -17,6 +17,9 @@ NPTR:  .res 2
     .asciiz "(2063)"  ;SYS argument
     .word 0           ;wskaźnik na następną linię, $0000 oznacza, że jest to ostania linia
 
+    ldx #$FF
+    txs
+    cld                 ; i nigdy więcej nie włączaj
     jsr INIT
     lda #1
     jsr SETDB         ;turn on double buffer
