@@ -214,20 +214,20 @@ włączeniu trybu *double buffer* miganie ekranu ustało.
 Procedura INIT ma za zadanie zainicjować mapę pamięci i podstawową obsługę przerwań. Przed
 jej wywołanie trzeba wywołać procedurę Wykonuje:
 
-1. kopię obszaru $E000-$FFFF z ROM do RAM, żeby można było podmienić wektory przerwań,
+1. kopiuje czcionki z ROM do $9000-$97FF móc je malować na ekranie graficznym,
 
-2. kopiuje czcionki z ROM do $9000-$97FF móc je malować na ekranie graficznym,
+2. inicjuje CIA#1, CIA#2, SID i VIC-II
 
-3. wyłącza KERNAL ROM i BASIC ROM,
+3. ustawia podstawową obsługę przerwań.
 
-4. wyłącza *double buffer*,
+4. wyłącza KERNAL ROM i BASIC ROM,
 
-5. włącza tryb graficzny w banku 1 i ustawia bank rysowania również na 1,
+5. wyłącza *double buffer*,
 
 6. czyści oba banki ekranu graficznego (również ten niewidoczny),
 
-7. ustawia podstawową obsługę przerwań.
-   
+7. włącza tryb graficzny w banku 1 i ustawia bank rysowania również na 1,
+
 
 Obszar pamięci $9800-$9FFF pozostaje wolny ale nie może on być wykorzystany ani na sprity ani
 na pamięć kolorów (VIC-II go nie widzi, bo w tym miejscu jest ROM z czcionkami).
@@ -361,19 +361,19 @@ miganie ekranu ustało.
 Procedura INITT ma za zadanie zainicjować mapę pamięci i podstawową obsługę przerwań
 w trybie tekstowym. Przed jej wywołanie trzeba wywołać procedurę Wykonuje:
 
-1. kopię obszaru $E000-$FFFF z ROM do RAM, żeby można było podmienić wektory przerwań,
+1. kopiuje czcionki z ROM do $4000-$47FF (niezbędne do pracy trybu tekstowego),
 
-2. kopiuje czcionki z ROM do $4000-$47FF (niezbędne do pracy trybu tekstowego),
+2. inicjuje CIA#1, CIA#2, SID i VIC-II
 
-3. wyłącza KERNAL ROM i BASIC ROM,
+3. ustawia podstawową obsługę przerwań.
 
-4. wyłącza *double buffer*,
+4. wyłącza KERNAL ROM i BASIC ROM,
 
-5. włącza tryb tekstowy w banku 1 i ustawia pierwszy ekran tekstowy pod adresem $6000-$63FF,
+5. wyłącza *double buffer*,
 
 6. czyści oba ekrany tekstowe (również ten niewidoczny),
 
-7. ustawia podstawową obsługę przerwań.
+7. włącza tryb tekstowy w banku 1 i ustawia pierwszy ekran tekstowy pod adresem $6000-$63FF,
    
 #### SETDBT
 
