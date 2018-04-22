@@ -13,15 +13,15 @@ Oczywiście, gry nie byłyby tak efektowne gdyby nie dwa potężne koprocesory:
 
 Jednak te dwa koprocesory same z siebie nic nie zrobią, muszą być nieustannie sterowane
 przez główny procesor MOS 6510. A wszystko musi być perfekcyjnie zsynchronizowane w czasie
-aby uzyskać efekt płynnego ruchy.
+aby uzyskać efekt płynnego ruchu.
 
 A może współczesne techniki wielozadaniowości i przetwarzania równoległego coś by w tym
 względzie pomogły? Czy w ogóle napisanie wielozadaniowego systemu operacyjnego jest
 możliwe na tak skromnym mikroprocesorze, który kompletnie nie ma żadnego wsparcia
 dla wielozadaniowości?
 
-W miarę wolnego czasu będę dokładał kolejne ćwiczenia ilustrujące, co raz bardzie
-złożone techniki programowania wielozadaniowego. Opis tych ćwiczeń będzie umieszczony
+W miarę wolnego czasu będę dokładał kolejne ćwiczenia ilustrujące, coraz bardzie
+złożone techniki programowania wielozadaniowego. Opisy tych ćwiczeń będą umieszczane
 w podfolderze [doc](https://github.com/packerbat/c64mt/tree/master/doc).
 
 Michał Wilde
