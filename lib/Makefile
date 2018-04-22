@@ -1,9 +1,10 @@
 TARGETS = c64mt.lib
 OBJS = irq.o nmi.o coldstart.o init.o initt.o \
        hgr.o cls.o pot.o line.o swapscr.o setdb.o \
-       nrm.o clst.o swapscrt.o setdbt.o
-       # wait.o volume.o text.o line.o draw.o fill.o \
-       #play.o voice.o irq.o scroll.o up.o shift.o shape.o sprite.o move.o
+       nrm.o clst.o swapscrt.o setdbt.o \
+       wait.o 
+       # volume.o text.o draw.o fill.o \
+       #play.o voice.o scroll.o up.o shift.o shape.o sprite.o move.o
 
 all: $(TARGETS)
 

@@ -11,7 +11,7 @@
 ;
 ; UWAGI:
 ;   1. Można używać obu liczników do własnych celów chyba że się chce używać
-;      urządzenie szerego podpięte do USERPORT (wtedy TIMER A jest potrzebny do nadawania).
+;      urządzenie szeregowe podpięte do USERPORT (wtedy TIMER A jest potrzebny do nadawania).
 ;   2. Można używać TOD do własnych celów.
 ;   3. Synchroniczny port seregowy jest w całości wyprowadzony na USERPOT włącznie z liniami
 ;      handshakingu PC i FLAG. Linia FLAG może być użyta jako chęć przejęcią magistrali przez
@@ -53,7 +53,7 @@
 ; SERIALBUS CLK do CIA#2 PA6 
 ; Cartridge NMI do CPU NMI
 ;
-; nie sprawdzam czy cartrig została wsadzony
+; nie sprawdzam czy cartrig został wsadzony
 
 .export NMI, CIA2IRQMask, CIA2IRQState
 .import COLDSTART
@@ -63,7 +63,6 @@ CIA2IRQMask:  .byte $7F        ;wstaw 0 do wszytkich masek przerwania CIA#2
 CIA2IRQState: .byte 0          ;ostatnie przyczyny IRQ w CIA#2
 
 .segment "CODE"
-
 .proc NMI
     sei                      ; dzięki temu IRQ nie przerwie NMI
     pha                      ; save A
@@ -75,15 +74,17 @@ CIA2IRQState: .byte 0          ;ostatnie przyczyny IRQ w CIA#2
     jmp COLDSTART
 
 przerwanie_od_CIA2:
-    sta CIA2IRQState
+    sta CIA2IRQState        ;na jedyną przyczyną może być Timer B więc tego nie analizuję
     ;lda #$7F
     ;sta $DD0D          ; dzięki temu CIA#2 nie spowoduje przerwania NMI w trakcie obsługi NMI (ale może spowodować cartrig albo klawisz RESTORE)
-    ;txa                ; copy X
-    ;pha                ; save X
-    ;tya                ; copy Y
-    ;pha                ; save Y
+    ;txa
+    ;pha
+    ;tya
+    ;pha
+    ;tsx         ;Y=$101,x  X=$102,x  A=$103,x  PS=$104,x  PCL=$105,x  PCH=$106,x
 
     ; tu można zrobić obsługę przerwania NMI z zablokowanymi przerwaniami IRQ i CIA#2
+    inc $6001
 
     ;pla                ; pull Y
     ;tay                ; restore Y
@@ -91,6 +92,6 @@ przerwanie_od_CIA2:
     ;tax                ; restore X
     ;lda CIA2IRQMask
     ;sta $DD0D          ; restore CIA#1 IRQ Mask
-    pla                 ; restore A
+    pla
     rti
 .endproc

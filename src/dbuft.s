@@ -116,14 +116,3 @@ slupek_namalowany:
     ;jsr WAIT
     rts
 .endproc
-
-.proc WAIT
-    ldx #1
-    ldy #0
-:   nop         ;65536 * 2 cycles
-    dex         ;65536 * 2 cycles
-    bne :-      ;(65536-256) * 3 cycles + 256 * 2 cycles)
-    dey         ;256 * 2 cycles
-    bne :-      ;255 * 3 cycles + 2 cycles
-    rts         ;powrót po 65536*4+65536*3-256+256*2+256*3-1=459775, powinno się zmieniać co 0.5 sekundy a chyba jest rzadziej.
-.endproc
