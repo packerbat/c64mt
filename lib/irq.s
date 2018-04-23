@@ -11,10 +11,20 @@
 ;
 ; Timer A jest użyty do przełączania zadań (o ile są włączone)
 ;
+; Jeśli są dwa zadania (lub więcej) to ta procedura obsługi przerwania IRQ niszczy na stosie
+; ewntualny adres powrotu z obsługi przerwania IRQ lub NMI, które zdarzyło się chwilę wcześniej
+; ale jego obsługa się jeszcze nie zakończyła. Z tego względu NMI nie jest dobrym pomysłem na
+; przełączanie zadań bo może wypaść w połowie obsługi przerwania IRQ. Teoretycznie można by
+; zrobić przełączanie zadań w NMI ale trzeba by zadbać, żeby przerwanie od zegara CIA#2
+; (który generuje NMI) było w tym czasie zamaskowane.
+;
+; Przerwanie NMI ma prawo się zdarzyć w trakcie przełączania zadania i niczym to nie grozi.
+
+.include "globals.inc"
 
 .export IRQ, CIA1IRQMask, CIA1IRQState, VICIRQMask, VICIRQState, JiffyClock
 .export CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE
-.import COLDSTART, TSACTIVE
+.import COLDSTART
 
 .segment "DATA"
 CIA1IRQMask:   .byte $7F        ;wstaw 0 do wszytkich masek przerwania CIA#2
@@ -23,15 +33,16 @@ VICIRQMask:    .byte 0          ;wstaw 0 do wszytkich masek przerwania VIC-II
 VICIRQState:   .byte 0          ;ostatnie przyczyny IRQ w VIC-II
 
 .segment "DATA"
-TASK_REGPCL:  .byte 0,0,0,0     ;na razie dopuszczam tylko 4 jednoczesne zadania
-TASK_REGPCH:  .byte 0,0,0,0
-TASK_REGA:    .byte 0,0,0,0
-TASK_REGX:    .byte 0,0,0,0
-TASK_REGY:    .byte 0,0,0,0
-TASK_REGPS:   .byte 0,0,0,0
-TASK_REGSP:   .byte 0,0,0,0
-TASK_STATE:   .byte 0,0,0,0     ; STATE: b7=1 active, b7=0 empty
-CURRTASK:     .byte 0           ;numer bieżącego zadania w zakresie 0..3 (na razie)
+TASK_REGPCL:  .res MAXTASKS,0
+TASK_REGPCH:  .res MAXTASKS,0
+TASK_REGA:    .res MAXTASKS,0
+TASK_REGX:    .res MAXTASKS,0
+TASK_REGY:    .res MAXTASKS,0
+TASK_REGPS:   .res MAXTASKS,0
+TASK_REGSP:   .res MAXTASKS,$FF
+TASK_STATE:   .byte $80           ; STATE: b7=1 active, b7=0 empty, zerowe zadanie nigdy nie może być puste i nie można go zakończyć
+              .res MAXTASKS-1,0
+CURRTASK:     .byte 0             ;numer bieżącego zadania w zakresie 0..3 (na razie)
 
 
 .segment "BSS"
@@ -40,14 +51,32 @@ JiffyClock:    .res 4           ;32-bitowy licznik przerwań IRQ
 .segment "CODE"
 
 .proc IRQ
-    sei                ; dzięki temu IRQ nie przerwie NMI
+    sei                ; dzięki temu IRQ nie przerwie obecnego IRQ
     pha                ; save A
+
+    lda $D019               ; get source of interrupts in VIC-II
+    bpl moze_przerwanie_od_CIA1
+
+przerwanie_od_VICII:
+    sta VICIRQState
+    ;txa                ; copy X
+    ;pha                ; save X
+    ;tya                ; copy Y
+    ;pha                ; save Y
+
+    ; tu można zrobić obsługę przerwania od VIC-II z zablokowanymi przerwaniami VIC-II, przerwania VIC_II odblokuje dobiero wpisanie 0 do $D019
+
+    ;pla                ; pull Y
+    ;tay                ; restore Y
+    ;pla                ; pull X
+    ;tax                ; restore X
+    lda #0
+    sta $D019           ; manual IRQ flag clear
+
+moze_przerwanie_od_CIA1:
     lda $DC0D                ; get source of interrupts in CIA#2 and clear interrupts flags
     bmi przerwanie_od_CIA1
     
-    lda $D019               ; get source of interrupts in VIC-II
-    bmi przerwanie_od_VICII
-
     ; nie znana przyczyna przerwania będzie kwitowana COLD START-em
     jmp COLDSTART
 
@@ -70,10 +99,25 @@ przerwanie_od_CIA1:
     ;inc $6002
     ;inc $A003
 
-    lda TSACTIVE
-    beq :+
+    ; --- spawdzam czy w ogóle przełączanie zdań jest potrzebne
     txa
     pha
+
+    lda TASK_STATE+(MAXTASKS-1)
+    ldx #MAXTASKS-2
+:   ora TASK_STATE,x
+    dex
+    bne :-
+    and #$80
+    bne sa_inne_zadania
+    pla                 ;nie ma zadań 1..6, jest tylko 0, które jest zawsze włączone
+    tax
+    ;lda CIA1IRQMask
+    ;sta $DC0D          ; restore CIA#1 IRQ Mask
+    pla
+    rti
+
+sa_inne_zadania:
     tya
     pha
     tsx         ;Y=$101,x  X=$102,x  A=$103,x  PS=$104,x  PCL=$105,x  PCH=$106,x
@@ -98,16 +142,21 @@ przerwanie_od_CIA1:
     sta TASK_REGSP,y    ; SP wskazuje na adres przed skokiem dlatego podnoszę o 6
 
     ; --- zwolnienie miejsca na stosie
+    ; tu mogłoby być 6 x PLA ale to zajmuje aż 24 cykle a poniższe rozwiązanie zajmujące też 6 bajtów - tylko 10 cykli
     txa
     clc
     adc #6          ;A, X, Y, PS, PC
     tax
-    txs             ;zajmuje tyle samo bajtów co 6xPLA ale jest zajmuje 10 cykli a nie 24 cykle
+    txs
 
     ; --- przełączenie zadań
-    tya
-    eor #1              ;na razie przełączam się tylko miedzy zadaniem 1 a 0
-    tay
+    ; Z wcześniejszego testu wiem, że mam conajmniej 2 niepuste sloty
+:   iny
+    cpy #MAXTASKS
+    bcc :+
+    ldy #0
+:   lda TASK_STATE,y
+    bpl :--
 
     ; --- uruchomienie nowego zdania, Y = numer nowego zadania
     ldx TASK_REGSP,y
@@ -124,27 +173,8 @@ przerwanie_od_CIA1:
     lda TASK_REGY,y
     sty CURRTASK
     tay
-
-:   ;lda CIA1IRQMask
+    ;lda CIA1IRQMask
     ;sta $DC0D          ; restore CIA#1 IRQ Mask
     pla                 ; restore A
-    rti
-
-przerwanie_od_VICII:
-    sta VICIRQState
-    ;txa                ; copy X
-    ;pha                ; save X
-    ;tya                ; copy Y
-    ;pha                ; save Y
-
-    ; tu można zrobić obsługę przerwania od VIC-II z zablokowanymi przerwaniami VIC-II, przerwania VIC_II odblokuje dobiero wpisanie 0 do $D019
-
-    ;pla                ; pull Y
-    ;tay                ; restore Y
-    ;pla                ; pull X
-    ;tax                ; restore X
-    lda #0
-    sta $D019           ; manual IRQ flag clear
-    pla
     rti
 .endproc

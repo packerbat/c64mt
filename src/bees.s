@@ -1,7 +1,7 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.import INITT, CLST, TXTPAGE, JiffyClock, WAIT, START_MULTITASKING
+.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB
 
 .segment "ZEROPAGE":zeropage
 NPTR:  .res 2
@@ -56,15 +56,17 @@ SPRITE1: .byte \
 
     ldx #$FF
     txs
-    cld                 ; i nigdy więcej nie włączaj
+    cld               ; i nigdy więcej nie włączaj
     jsr INITT
 
-    lda #$35
+    lda #$20          ;niepotrzebne ponowne czyszczenie
     jsr CLST
+    lda #$05          ;domyślne kolory C64 po włączeniu
+    jsr FILLCT
 
-    lda #>TASK2         ;będę wracał przez RTI więc TASK2 a nie TASK2-1
+    lda #>TASK2       ;będę wracał przez RTI więc TASK2 a nie TASK2-1
     ldx #<TASK2
-    jsr START_MULTITASKING
+    jsr STARTJOB
 
     jmp TASK1
 

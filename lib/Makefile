@@ -1,7 +1,7 @@
 TARGETS = c64mt.lib
-OBJS = irq.o nmi.o coldstart.o init.o initt.o \
+OBJS = irq.o nmi.o coldstart.o startjob.o init.o initt.o \
        hgr.o cls.o pot.o line.o swapscr.o setdb.o \
-       nrm.o clst.o swapscrt.o setdbt.o \
+       nrm.o clst.o fillct.o swapscrt.o setdbt.o \
        wait.o 
        # volume.o text.o draw.o fill.o \
        #play.o voice.o scroll.o up.o shift.o shape.o sprite.o move.o
@@ -12,7 +12,7 @@ c64mt.lib: $(OBJS)
 	rm -f c64mt.lib
 	ar65 r c64mt.lib $(OBJS)
 
-%.o: %.s
+%.o: %.s globals.inc
 	ca65 -t c64 -v -g -o $@ $<
 
 clean:

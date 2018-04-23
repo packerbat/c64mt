@@ -1,9 +1,8 @@
 ;------------------------------------
-; Procedura CLST czyści ekran tekstowy i tablicę kolorów ekranu tekstowego.
-; tablica kolorów ma stałe miejsce D800-DBE7
-; tablica znaków zaczyna się od strony podanej w TXTPAGE
+; Procedura CLST czyści ekran tekstowy.
+; Aktywna ekran (niekoniecznie widoczny) wskazuje zmienna TXTPAGE (typowo $60 albo $64)
 ;
-; input: A=kolor, TXTPAGE
+; input: A=wypełniacz, TXTPAGE
 ; output: ZF=1, X=0, Y=0
 ; stack: 1
 ; zeropage: 2
@@ -19,22 +18,11 @@ DPTR:    .res 2
 .proc CLST
     ldy #0
     sty DPTR
-    ldy #$DB
-    sty DPTR+1
-    ldx #4          ;4x256 = 1KB
-    ldy #$e8        ;rozmiar $03e8 = 1000
-:   dey
-    sta (DPTR),y
-    bne :-
-    dec DPTR+1
-    dex
-    bne :-
-
-    lda TXTPAGE
-    clc
-    adc #3
-    sta DPTR+1      ;będzie $6300 albo $6700
-    lda #$20
+    ldy TXTPAGE
+    iny
+    iny
+    iny
+    sty DPTR+1      ;będzie $6300 albo $6700
     ldx #4          ;4x256 = 1KB
     ldy #$E8        ;rozmiar $03e8 = 1000
 :   dey
