@@ -1,7 +1,7 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program dbuft
 
-.import INITT, SETDBT, SWAPSCRT, CLST, TXTPAGE, JiffyClock
+.import INITT, SETDBT, SWAPSCRT, CLST, FILLCT, TXTPAGE, JiffyClock
 
 .segment "ZEROPAGE":zeropage
 NPTR:  .res 2
@@ -34,8 +34,10 @@ KONCOWKI:  .byte 100,111,121,98,248,247,227,160
     jmp :-
 
 .proc DRAW_SCEEN
-    lda #$35
+    lda #$20
     jsr CLST
+    lda #$05
+    jsr FILLCT
 
     lda #<(24*40)
     sta NPTR

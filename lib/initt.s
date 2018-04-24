@@ -22,7 +22,7 @@ DSTPTR:   .res 2
 
     lda #$33         ;turn on CHARACTER ROM at address $D000-DFFF
     sta $01
-    lda #$D8
+    lda #$D0
     ldy #$40
     ldx #16          ;=2KB
     jsr copy_pages
@@ -84,7 +84,7 @@ DSTPTR:   .res 2
     sta TXTPAGE
     lda #$20          ;wypełniaczem jest spacja
     jsr CLST
-    lda #$FE          ;domyślne kolory C64 po włączeniu
+    lda #$0E          ;domyślne kolory C64 po włączeniu
     jsr FILLCT
 
     jsr NRM

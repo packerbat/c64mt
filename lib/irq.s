@@ -41,7 +41,8 @@ TASK_REGY:    .res MAXTASKS,0
 TASK_REGPS:   .res MAXTASKS,0
 TASK_REGSP:   .res MAXTASKS,$FF
 TASK_STATE:   .byte $80           ; STATE: b7=1 active, b7=0 empty, zerowe zadanie nigdy nie może być puste i nie można go zakończyć
-              .res MAXTASKS-1,0
+              .res MAXTASKS-1,0   ;        b6=1 request for stop
+                                  ;        b5=1 task terminated
 CURRTASK:     .byte 0             ;numer bieżącego zadania w zakresie 0..3 (na razie)
 
 
@@ -64,6 +65,11 @@ przerwanie_od_VICII:
     ;tya                ; copy Y
     ;pha                ; save Y
 
+    lda $6001
+    clc
+    adc #1
+    and #63
+    sta $6001
     ; tu można zrobić obsługę przerwania od VIC-II z zablokowanymi przerwaniami VIC-II, przerwania VIC_II odblokuje dobiero wpisanie 0 do $D019
 
     ;pla                ; pull Y
@@ -87,22 +93,38 @@ przerwanie_od_CIA1:
 
     ; tu można zrobić obsługę przerwania CIA#1 z zablokowanymi przerwaniami IRQ i CIA#2
     inc JiffyClock
-    bne :+
-    inc JiffyClock+1
-    bne :+
-    inc JiffyClock+2
-    bne :+
-    inc JiffyClock+3
+    ;bne :+
+    ;inc JiffyClock+1     ; na razie nie używam dlatego zakomentowane
+    ;bne :+
+    ;inc JiffyClock+2
+    ;bne :+
+    ;inc JiffyClock+3
+;:
 
-:   inc $6000
+    lda $6000
+    clc
+    adc #1
+    and #63
+    sta $6000
     ;inc $6401
     ;inc $6002
     ;inc $A003
 
-    ; --- spawdzam czy w ogóle przełączanie zdań jest potrzebne
     txa
     pha
 
+    ; --- najpierw zamykam zadanie, które potwierdziły swój zamknięcie
+    lda TASK_STATE+(MAXTASKS-1)
+    ldx #MAXTASKS-2
+:   lda TASK_STATE,x
+    and #$20
+    beq :+
+    lda #0
+    sta TASK_STATE,x
+:   dex
+    bne :--
+
+    ; --- spawdzam czy w ogóle przełączanie zdań jest potrzebne
     lda TASK_STATE+(MAXTASKS-1)
     ldx #MAXTASKS-2
 :   ora TASK_STATE,x

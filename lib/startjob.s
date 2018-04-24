@@ -8,7 +8,7 @@
 ; je potem przerwie i wznowi zadanie 0.
 ;
 ; Użytkownik nie ma władzy na kolejnością wykonywania zadań. Jeśli żadne zadania
-; nie będą zwalnianie to kolejność będzie zbodna z kolejności wywoływania START_JOB
+; nie będą zwalnianie to kolejność będzie zgodna z kolejnością wywoływania STARTJOB
 ; ale jeśli jakieś zadanie się zwolni to powstała dziura będzie zajmowana w pierwszej
 ; kolejności.
 ;
@@ -23,6 +23,11 @@
 ; ustawienie CURRTASK na nowe zadanie.
 ;
 ; System nie zapamiętuje, który proces zainicjował nowe zadanie.
+;
+; Zadanie nie może się zakończyć ani RTS ani RTI bo nie ma do czego wrócić. Jedyne co może
+; zrobić to zgłosić chęć zakończenia działania jedną z flag (bit b5) w polu STATUS swojego
+; dekryptora.
+
 
 .include "globals.inc"
 
@@ -88,10 +93,15 @@
     sta TASK_REGPCL,y
     lda $103,x          ; pobranie PCH
     sta TASK_REGPCH,y
-    lda #0              ; rejestry A, X, Y będą 0 na starcie
+    lda #0              ; rejestry A będzie 0 na starcie
     sta TASK_REGA,y
-    sta TASK_REGX,y
-    sta TASK_REGY,y
+    tya
+    clc
+    adc #<TASK_STATE
+    sta TASK_REGX,y     ; na starcie rejestr X będzie zawierał młoszy adres statusu
+    lda #0
+    adc #>TASK_STATE
+    sta TASK_REGY,y     ; a rejestr Y będzie zawierał starszy adres statusu
     lda $104,x          ; PS będzie równe staremu zadaniu
     sta TASK_REGPS,y
     tya

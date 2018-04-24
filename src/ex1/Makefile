@@ -1,6 +1,6 @@
 EXAMPLES = sunandmoon.prg
 TARGETS = lib $(EXAMPLES)
-OBJS = sunandmoon.o sun.o moon.o
+OBJS = sunandmoon.o sun.o moon.o town.o
 
 all: $(TARGETS)
 

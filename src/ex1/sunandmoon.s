@@ -1,17 +1,13 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, TASK2, TASK3
+.include "../../lib/globals.inc"
 
-.segment "ZEROPAGE":zeropage
-NPTR:  .res 2
-NRSLUP: .res 1
+.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, TASK2, TASK3, TASK4
+.import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, LASTKEYS, KBDHEAD, KBDTAIL, KBDBUFFER
 
-.segment "DATA"
-SLUPKI:   .byte 20,21,24,28,30,31,28,27,27,30,   35,40,48,54,55,55,56,57,60,65,   64,63,57,52,43,38,32,27,22,21,   18,17,17,18,19,20,22,21,21,20
-
-.segment "RODATA"
-KONCOWKI:  .byte 227,247,248,98,121,111,100,32,160
+.segment "BSS"
+LINELEN:  .res 1
 
 .segment "CODE"
     .org $0801
@@ -27,10 +23,17 @@ KONCOWKI:  .byte 227,247,248,98,121,111,100,32,160
     cld               ; i nigdy więcej nie włączaj
     jsr INITT
 
-    lda #$20          ;niepotrzebne ponowne czyszczenie
-    jsr CLST
-    lda #$05          ;domyślne kolory C64 po włączeniu
-    jsr FILLCT
+    lda $D011        ;extended background mode
+    ora #$40
+    sta $D011
+    lda #0           ;czarne tło dla konsoli
+    sta $D021
+    lda #5           ;zielone
+    sta $D022
+    lda #6           ;ciemno niebieskie
+    sta $D023
+    lda #14          ;jasno niebieskie
+    sta $D024
 
     lda #>TASK2       ;będę wracał przez RTI więc TASK2 a nie TASK2-1
     ldx #<TASK2
@@ -40,89 +43,127 @@ KONCOWKI:  .byte 227,247,248,98,121,111,100,32,160
     ldx #<TASK3
     jsr STARTJOB
 
+    lda #>TASK4
+    ldx #<TASK4
+    jsr STARTJOB
+
     jmp TASK1
 
 ;*********************************************************
 ; TASK No 1
 
-.segment "CODE"
-.proc DRAW_SCEEN
-    lda #<(24*40)
-    sta NPTR
-    lda TXTPAGE
-    clc
-    adc #>(24*40)
-    sta NPTR+1      ;będzie $6300 albo $6700
+.proc TASK1
+    ldx #40
+    lda #$20
+:   dex
+    sta $6000,x         ;pasek stanu na górze i podwójny pasek konsoli na dole
+    sta $6000+23*40,x
+    sta $6000+24*40,x
+    bne :-
+    ldx #40
+    lda #5              ;zielone litery  na pasku stanu i konsoli
+:   dex
+    sta $D800,x         ;pasek stanu na górze i podwójny pasek konsoli na dole
+    sta $D800+23*40,x
+    sta $D800+24*40,x
+    bne :-
+    lda #29             ;prompt
+    sta $6000+23*40
+    lda #$20+$40        ;kursor
+    sta $6000+23*40+1
+    ldx #0
+    stx LINELEN
 
-    lda #0          ;numer kolumny
-    sta NRSLUP
+    ; --- pętla zadania głównego czyli obsługa paska stanu i konsoli
+:   jsr print_number_of_jobs
+    jsr SCANKBD
+    jsr print_keyboard_state
+    lda KBDTAIL
+    cmp KBDHEAD
+    beq bufor_klawiatury_pusty
+:   clc
+    adc #1
+    cmp #KDBQUEUESIZE
+    bcc :+
+    lda #0
+:   tax
+    lda KBDBUFFER,x     ;najpiew pobrać do kolejki
+    stx KBDTAIL         ;a dopiero potem przesunąć TAIL
 
-nastepny_slupek:
-    ldx #8          ;pętla po liniach licząc od dołu
- 
-:   txa             ;decyzja co wstawić: X+8>=W -> 32, X>=W -> K, 32
-    ldy NRSLUP
-    sec
-    sbc SLUPKI,y
-    ldy #8
-    bcc :+          ; to grunt
     tay
-    cmp #8
-    bcc :+          ; to końcówka gruntu
-    ldy #7          ; to niebo 
-:   lda KONCOWKI,y
-    ldy #0
-    sta (NPTR),y
-    lda NPTR        ;bloczek wyżej
-    sec
-    sbc #40
-    sta NPTR
-    lda NPTR+1
-    sbc #0
-    sta NPTR+1
+    and #$80
+    bne :+
+    tya
+    and #$3F
+    ldx LINELEN
+    sta $6000+23*40+1,x
+    inx
+    lda #$20+$80
+    sta $6000+23*40+1,x
+    stx LINELEN
 
+:   lda KBDTAIL
+    cmp KBDHEAD
+    bne :---
+
+bufor_klawiatury_pusty:
+    ldy #1
+    jsr WAIT
+    jmp :----
+.endproc
+
+.proc print_number_of_jobs
+    ldx #2
+    ldy #0
+    jsr MVCRSR
+    lda #'j'
+    jsr CHROUT
+    lda #'o'
+    jsr CHROUT
+    lda #'b'
+    jsr CHROUT
+    lda #'s'
+    jsr CHROUT
+    lda #':'
+    jsr CHROUT
+    jsr JOBS
     txa
     clc
-    adc #8
-    tax
-    cpx #200          ;wspinam się na górę
-    bne :--
-
-    lda NPTR        ;nastepna kolumna
-    clc
-    adc #<961
-    sta NPTR
-    lda NPTR+1
-    adc #>961
-    sta NPTR+1
-
-    inc NRSLUP
-    lda NRSLUP
-    cmp #40
-    bcc nastepny_slupek
-    rts
-.endproc
-
-.proc MOVEOBJS
-    ldx #0          ;przesunięcie słupków w lewo
-    ldy #39
-    lda SLUPKI,x
+    adc #'0'
     pha
-:   lda SLUPKI+1,x
-    sta SLUPKI,x
-    inx
-    dey
-    bne :-
+    tya
+    clc
+    adc #'0'
+    jsr CHROUT
+    lda #'/'
+    jsr CHROUT
     pla
-    sta SLUPKI,x
+    jsr CHROUT
     rts
 .endproc
 
-.proc TASK1
-:   jsr DRAW_SCEEN
-    ldy #14
-    jsr WAIT
-    jsr MOVEOBJS
-    jmp :-
-.endproc
+.proc print_keyboard_state
+    lda #7
+    pha                 ;TMPBIT = $101,x
 
+:   tsx
+    lda $101,x
+    asl
+    clc
+    adc #12
+    tax         ;wylicz kolumnę
+    ldy #0
+    jsr MVCRSR
+
+    tsx
+    ldy $101,x
+    lda LASTKEYS,y
+    jsr PRINTHEX
+
+    tsx
+    dec $101,x
+    bpl :-
+
+    pla             ;usuwam tymczasowe zmienne
+    rts
+.endproc

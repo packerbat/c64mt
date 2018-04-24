@@ -9,9 +9,12 @@ SLUPKI:   .byte 8,8,8,0,12,12,4,4,4,4,   4,0,7,7,7,0,8,8,8,8,   0,14,14,14,16,16
 
 .segment "ZEROPAGE":zeropage
 NPTR:  .res 2
+STATUSPTR: .word 0
 
 .segment "CODE"
 .proc TASK4
+    stx STATUSPTR
+    sty STATUSPTR+1
     jsr CLRWIN
 
     lda #%11111111      ;zmiana litery $3f na segment wieżowca
@@ -29,7 +32,10 @@ NPTR:  .res 2
 :   ldy #14
     jsr WAIT
     jsr SCROLL_SCEEN
-    jmp :-
+    ldy #0
+    lda (STATUSPTR),y
+    and #$40          ;test stop request
+    beq :-
 .endproc
 
 .proc CLRWIN
