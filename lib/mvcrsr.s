@@ -3,7 +3,19 @@
 ; input: X=kolumna 0..39, Y=wiersz 0..24
 ; output: Y=?, X=?, A=kolumna, NZCIDV=011---
 ; stack: 4
-; reentrant: yes (z wyjątkiem przerwania NMI)
+; reentrant: no
+;
+; Ta procedura ma zmienne globalne więc może być użyta tyko w jednym
+; wątku, użycie w innym wątku zmieni globalne zmienne CURROW, CURCOL, CRSPTR
+; Żeby ta procedura miała sense w środowisku wielozadaniowym
+; to musielibyśmy odczytać z dekryktora zadania wskaźnik na dwa
+; bloki pamięci - prywatny fragment zeropage i prywatny fragment
+; danych "DATA"
+;
+; Można to trochę poprawić dodając parametry na stosie, w których każdy
+; proces przekaże swoje zmienne, a ta procedura je zaktualizuje
+; i zwróci. Niestety nawet tu nie unikniemy korzystania z zeropage
+; bo wskaźnik CRSPTR musi być w zeropage.
 
 .export MVCRSR, CURROW, CURCOL, CRSPTR
 .import TXTPAGE
@@ -47,8 +59,7 @@ CRSPTR:   .res 2
     adc TXTPAGE
     sta TMPH            ; $104,x i $103,x mają teraz wiersz * 40 + kolumna + TXTPAGE*256
 
-    sei                 ; na razie atomowość tych zmian gwarantuję blokadą przerwań
-    lda NEWROW          ; licząc na to, że nikt nie wywoła tej procedury w NMI
+    lda NEWROW
     sta CURROW
     lda NEWCOL
     sta CURCOL
@@ -56,7 +67,6 @@ CRSPTR:   .res 2
     sta CRSPTR
     lda TMPH
     sta CRSPTR+1
-    cli
 
     txs             ;szykie 3 x PLA
     pla             ;to przywróci A

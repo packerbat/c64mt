@@ -132,12 +132,42 @@ przerwanie_od_CIA1:
     bne :-
     and #$80
     bne sa_inne_zadania
-    pla                 ;nie ma zadań 1..6, jest tylko 0, które jest zawsze włączone
+    lda CURRTASK
+    bne nie_zerowe
+    pla                 ;nie ma zadań 1..6, jest tylko 0 i jest ono aktywne
     tax
     ;lda CIA1IRQMask
     ;sta $DC0D          ; restore CIA#1 IRQ Mask
     pla
     rti
+
+nie_zerowe:     ;to się zdarzy gdy zabijemy ostatni proces
+    pla         ;usuwam zapamiętany X
+    pla         ;usuwam zapamiętany A
+    pla         ;usuwam zapamiętany PS
+    pla         ;usuwam zapamiętany PCL
+    pla         ;usuwam zapamiętany PCH
+    ldy #0
+    ; --- uruchomienie nowego zdania, Y = numer nowego zadania
+    ldx TASK_REGSP,y
+    txs                 ;od tej pory działamy na stosie nowego zadania
+    lda TASK_REGPCH,y
+    pha
+    lda TASK_REGPCL,y
+    pha
+    lda TASK_REGPS,y
+    pha
+    lda TASK_REGA,y     ;tu muszę użyć stosu bo inaczej nie odczytam A
+    pha
+    ldx TASK_REGX,y
+    lda TASK_REGY,y
+    sty CURRTASK
+    tay
+    ;lda CIA1IRQMask
+    ;sta $DC0D          ; restore CIA#1 IRQ Mask
+    pla                 ; restore A
+    rti
+
 
 sa_inne_zadania:
     tya

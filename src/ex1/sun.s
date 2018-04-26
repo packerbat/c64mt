@@ -2,7 +2,7 @@
 ; sekwencja uruchamiająca program bees
 
 .export TASK2
-.import WAIT, BITSOFF, BITSON
+.import WAIT, BITSOFF, BITSON, SUNMUTEX
 
 SPRITENR = 0
 SHAPENR = $A0
@@ -392,6 +392,7 @@ BALISTA1: .word 0,220
 
 .segment "CODE"
 .proc TASK2
+    inc SUNMUTEX
     stx STATUSPTR
     sty STATUSPTR+1
 
@@ -469,6 +470,8 @@ koniec_SUN:
     lda (STATUSPTR),y
     ora #$20
     sta (STATUSPTR),y
+    dec SUNMUTEX
+
 :   nop
     jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event
 .endproc

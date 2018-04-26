@@ -3,7 +3,7 @@
 ; input: A=litera, CRSPTR
 ; output: Y=?, X=?, A=?, NZCIDV=011---
 ; stack: 4
-; reentrant: yes (z wyjątkiem przerwania NMI)
+; reentrant: no
 
 .export CHROUT
 .import TXTPAGE, CRSPTR:zeropage, CURROW, CURCOL
@@ -15,8 +15,7 @@
     sbc #$40
 :   sta (CRSPTR),y
 
-    sei                 ; na razie atomowość tych zmian gwarantuję blokadą przerwań
-    lda CURCOL          ; licząc na to, że nikt nie wywoła tej procedury w NMI
+    lda CURCOL
     cmp #39
     bcs :+
     inc CURCOL          ;najprostszy przypadek, wiersz się nie skończył więc tylko dwa inkrementy
@@ -44,6 +43,5 @@
     sta CRSPTR+1
 
 koniec_przesuwania:
-    cli
     rts
 .endproc

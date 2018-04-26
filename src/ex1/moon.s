@@ -2,7 +2,7 @@
 ; sekwencja uruchamiająca program bees
 
 .export TASK3
-.import WAIT, BITSOFF, BITSON
+.import WAIT, BITSOFF, BITSON, MOONMUTEX
 
 SPRITENR = 1
 SHAPENR = $A1
@@ -391,6 +391,7 @@ BALISTA2: .word 0,220
 
 .segment "CODE"
 .proc TASK3
+    inc MOONMUTEX
     stx STATUSPTR
     sty STATUSPTR+1
 
@@ -468,6 +469,8 @@ koniec_MOON:
     lda (STATUSPTR),y
     ora #$20
     sta (STATUSPTR),y
+    dec MOONMUTEX
+
 :   nop
     jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event
 .endproc

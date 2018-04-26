@@ -3,7 +3,7 @@
 ; input: A=wartość, CRSPTR
 ; output: Y=?, X=?, A=?, NZCIDV=011---
 ; stack: 7
-; reentrant: yes (z wyjątkiem przerwania NMI)
+; reentrant: no
 
 .export PRINTHEX
 .import CHROUT

@@ -1,8 +1,9 @@
 ;---------------------------------------------------------- 
-; sekwencja uruchamiająca program bees
+; Proces wyświetlający przesuwające się wieżowce
+; 
 
 .export TASK4
-.import WAIT, TXTPAGE
+.import WAIT, TXTPAGE, TOWNMUTEX
 
 .segment "DATA"
 SLUPKI:   .byte 8,8,8,0,12,12,4,4,4,4,   4,0,7,7,7,0,8,8,8,8,   0,14,14,14,16,16,16,13,13,13,   0,6,6,6,6,5,5,5,5,0
@@ -13,6 +14,7 @@ STATUSPTR: .word 0
 
 .segment "CODE"
 .proc TASK4
+    inc TOWNMUTEX
     stx STATUSPTR
     sty STATUSPTR+1
     jsr CLRWIN
@@ -34,8 +36,16 @@ STATUSPTR: .word 0
     jsr SCROLL_SCEEN
     ldy #0
     lda (STATUSPTR),y
-    and #$40          ;test stop request
+    and #$40            ;test stop request, sprawdzanie tego to dobra wola procesu, jeśli nie sprawdza to nie zakończy
     beq :-
+
+    lda (STATUSPTR),y
+    ora #$20
+    sta (STATUSPTR),y
+    dec TOWNMUTEX
+
+:   nop
+    jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event
 .endproc
 
 .proc CLRWIN
