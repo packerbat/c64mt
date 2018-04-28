@@ -12,17 +12,14 @@
 .include "../../lib/globals.inc"
 
 .export SUNMUTEX, MOONMUTEX, TOWNMUTEX
-.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, TASK2, TASK3, TASK4
+.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
 .import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, NEWKEYS, KEYMOD
-.import STOPJOB
+.import CONSINIT, CONSGETCHAR, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
 
 .segment "ZEROPAGE":zeropage
 CMDPTR:   .res 2
 
 .segment "BSS"
-LINELEN:  .res 1
-CRSRPOS:  .res 1
-BLINKCNT: .res 1
 CMDLEN:   .res 1
 PATERLEN: .res 1
 
@@ -80,43 +77,7 @@ CMD2:   .byte 5,"start"
 ; TASK No 1
 
 .proc TASK1
-    ldx #40
-    lda #$20
-:   dex
-    sta $6000,x         ;pasek stanu na górze i podwójny pasek konsoli na dole
-    sta $6000+23*40,x
-    sta $6000+24*40,x
-    bne :-
-    ldx #40
-    lda #5              ;zielone litery  na pasku stanu i konsoli
-:   dex
-    sta $D800,x         ;pasek stanu na górze i podwójny pasek konsoli na dole
-    sta $D800+23*40,x
-    sta $D800+24*40,x
-    bne :-
-
-    ldx #0
-    ldy #23
-    jsr MVCRSR
-    lda #'r'
-    jsr CHROUT
-    lda #'e'
-    jsr CHROUT
-    lda #'a'
-    jsr CHROUT
-    lda #'d'
-    jsr CHROUT
-    lda #'y'
-    jsr CHROUT
-    ldx #0
-    ldy #24
-    jsr MVCRSR
-    lda #']'
-    jsr CHROUT
-    ldx #0
-    stx LINELEN
-    stx CRSRPOS
-    jsr CRSRON
+    jsr CONSINIT
 
     ; --- pętla zadania głównego czyli obsługa paska stanu i konsoli
 main_loop:
@@ -207,146 +168,19 @@ get_next_key:
     rts
 
 cos_jest_w_buforze_klawiatury:
-    cmp #96     ;pomijam wciśnięcia
-    bcs get_next_key
-    cmp #32     ;na razie znaki sterujące pomijam
-    bcc znaki_sterujace
-    pha
-    jsr CRSROFF
-    pla
-    ldx LINELEN
-    cpx #38
-    bcs :+++         ;skończyło się miejsce więc milcząco ignoruję
-    pha
-    lda CRSRPOS
-    cmp LINELEN
-    beq :++          ;przesuwanie nie jest potrzebne
-
-    ldx #38
-:   lda $6000+24*40,x
-    sta $6000+24*40+1,x
-    dex
-    cpx CRSRPOS
-    bne :-
-
-:   ldx CRSRPOS
-    inx
-    ldy #24
-    jsr MVCRSR
-    pla
-    jsr CHROUT
-    inc LINELEN
-    inc CRSRPOS
-:   jsr CRSRON
-    jmp get_next_key
-
-; --- program reaguje na następujące znaki:
-; CRSR LEFT(30), CRSR RIGHT(29), DEL (20), HOME (19), RETURN (13) 
-znaki_sterujace:
-    cmp #30
-    beq to_jest_crsr_left
-    cmp #29
-    beq to_jest_crsr_right
-    cmp #20
-    beq to_jest_del
-    cmp #19
-    beq to_jest_home
+    jsr CONSKEYS
+    bcc get_next_key
     cmp #13
-    beq to_jest_return
-    jmp get_next_key
-
-to_jest_crsr_left:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp #0
-    beq :+
-    dec CRSRPOS
-:   jsr CRSRON
-    jmp get_next_key
-
-to_jest_crsr_right:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp LINELEN
-    beq :+
-    inc CRSRPOS
-:   jsr CRSRON
-    jmp get_next_key
-
-to_jest_del:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp LINELEN
-    beq :++
-
-    dec LINELEN
-    ldx CRSRPOS
-:   lda $6000+24*40+2,x
-    sta $6000+24*40+1,x
-    inx
-    cpx #38
-    bne :-
-
-:   jsr CRSRON
-    jmp get_next_key
-
-to_jest_home:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp #0
-    beq :+
-    lda  #0
-    sta CRSRPOS
-:   jsr CRSRON
-    jmp get_next_key
-
-to_jest_return:
+    bne get_next_key
     jsr CRSROFF
     lda LINELEN
     sta CMDLEN
-    jsr MOVEUP
+    jsr CONSMOVEUP
     lda CMDLEN
     beq :+          ;nic do roboty
     jsr DOCMD
 :   jsr CRSRON
     jmp get_next_key
-.endproc
-
-.proc CRSROFF
-    lda #20
-    sta BLINKCNT
-    ldx CRSRPOS
-    lda $6000+24*40+1,x
-    and #$BF
-    sta $6000+24*40+1,x
-    lda #5
-    sta $D800+24*40+1,x
-    rts
-.endproc
-
-.proc CRSRON
-    lda #20
-    sta BLINKCNT
-    ldx CRSRPOS
-    lda $6000+24*40+1,x
-    ora #$40
-    sta $6000+24*40+1,x
-    lda #0
-    sta $D800+24*40+1,x
-    rts
-.endproc
-
-.proc CRSRNEG
-    lda #20
-    sta BLINKCNT
-    ldx CRSRPOS
-    lda $6000+24*40+1,x
-    eor #$40
-    sta $6000+24*40+1,x
-    lda $D800+24*40+1,x
-    eor #5
-    sta $D800+24*40+1,x
-    rts
 .endproc
 
 .proc DOCMD
@@ -357,10 +191,10 @@ to_jest_return:
     sta CMDPTR+1
     jsr CHKCMD
     bcc :+
-    jsr GETCHARFROMSCREEN
+    jsr CONSGETCHAR
     cmp #$20
     inx
-    jsr GETCHARFROMSCREEN
+    jsr CONSGETCHAR
     cmp #'1'
     bcc invalid_command
     cmp #'7'
@@ -376,10 +210,10 @@ to_jest_return:
     sta CMDPTR+1
     jsr CHKCMD              ;X jest już ustawione
     bcc invalid_command
-    jsr GETCHARFROMSCREEN
+    jsr CONSGETCHAR
     cmp #$20
     inx
-    jsr GETCHARFROMSCREEN
+    jsr CONSGETCHAR
     cmp #'s'
     beq uruchom_sun
     cmp #'m'
@@ -426,7 +260,7 @@ invalid_command:
     jsr CHROUT
     lda #'r'
     jsr CHROUT
-    jsr MOVEUP
+    jsr CONSMOVEUP
     rts
 .endproc
 
@@ -443,7 +277,7 @@ invalid_command:
     sta PATERLEN
     bne :++             ;to jest skok bezwzględny
 
-:   jsr GETCHARFROMSCREEN
+:   jsr CONSGETCHAR
     iny
     cmp (CMDPTR),y
     bne :++             ;litera się nie zgadza, to źle
@@ -461,37 +295,3 @@ invalid_command:
     rts
 .endproc
 
-.proc MOVEUP
-    ldx #39
-:   lda $6000+24*40,x
-    sta $6000+23*40,x
-    lda #$20
-    sta $6000+24*40,x
-    lda $D800+24*40,x
-    sta $D800+23*40,x
-    lda #5              ;zielone litery  na pasku stanu i konsoli
-    sta $D800+24*40,x
-    dex
-    bpl :-
-    ldx #0
-    ldy #24
-    jsr MVCRSR
-    lda #']'
-    jsr CHROUT
-    ldx #0
-    stx LINELEN
-    stx CRSRPOS
-    rts
-.endproc
-
-;-----------------------------
-; input: X - pozycja litery na ekranie
-; output: A - lista ASCII, X - niezmienione, Y - niezmienione
-.proc GETCHARFROMSCREEN
-    lda $6000+23*40+1,x     ;bieże z linii 23 bo komenda właśnie została podniesiona
-    cmp #32
-    bcs :+
-    clc
-    adc #64
-:   rts
-.endproc
