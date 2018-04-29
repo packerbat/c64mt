@@ -15,13 +15,7 @@
 .import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
 .import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, NEWKEYS, KEYMOD
 .import CONSINIT, CONSGETCHAR, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
-
-.segment "ZEROPAGE":zeropage
-CMDPTR:   .res 2
-
-.segment "BSS"
-CMDLEN:   .res 1
-PATERLEN: .res 1
+.import CHKCMD, CMDLEN
 
 .segment "DATA"
 SUNMUTEX:   .byte 0
@@ -29,9 +23,7 @@ MOONMUTEX:  .byte 0
 TOWNMUTEX:  .byte 0
 
 .segment "RODATA"
-CMD1:   .byte 4,"stop"
-CMD2:   .byte 5,"start"
-        .byte 0
+CMDSTAB:   .byte 4,"stop",5,"start",0
 
 .segment "CODE"
     .org $0801
@@ -185,13 +177,14 @@ cos_jest_w_buforze_klawiatury:
 
 .proc DOCMD
     ldx #0          ;ustawiam się na początku wiersza polecenia
-    lda #<CMD1
-    sta CMDPTR
-    lda #>CMD1
-    sta CMDPTR+1
+    lda #<CMDSTAB
+    ldy #>CMDSTAB
     jsr CHKCMD
-    bcc :+
-    jsr CONSGETCHAR
+    bcc invalid_command
+    cmp #1                  ;A=1 to START
+    beq :+
+
+    jsr CONSGETCHAR         ;A=0 to STOP
     cmp #$20
     inx
     jsr CONSGETCHAR
@@ -204,13 +197,7 @@ cos_jest_w_buforze_klawiatury:
     jsr STOPJOB
     rts
 
-:   lda #<CMD2
-    sta CMDPTR
-    lda #>CMD2
-    sta CMDPTR+1
-    jsr CHKCMD              ;X jest już ustawione
-    bcc invalid_command
-    jsr CONSGETCHAR
+:   jsr CONSGETCHAR         ;obsługa komendy START
     cmp #$20
     inx
     jsr CONSGETCHAR
@@ -220,7 +207,23 @@ cos_jest_w_buforze_klawiatury:
     beq uruchom_moon
     cmp #'t'
     beq uruchom_town
-    jmp invalid_command
+
+invalid_command:
+    ldx #0             ;ERROR
+    ldy #24
+    jsr MVCRSR
+    lda #'e'
+    jsr CHROUT
+    lda #'r'
+    jsr CHROUT
+    lda #'r'
+    jsr CHROUT
+    lda #'o'
+    jsr CHROUT
+    lda #'r'
+    jsr CHROUT
+    jsr CONSMOVEUP
+    rts
 
 uruchom_sun:
     lda SUNMUTEX
@@ -245,53 +248,5 @@ uruchom_town:
     ldx #<TASK4
     jsr STARTJOB
 :   rts
-
-invalid_command:
-    ldx #0             ;ERROR
-    ldy #24
-    jsr MVCRSR
-    lda #'e'
-    jsr CHROUT
-    lda #'r'
-    jsr CHROUT
-    lda #'r'
-    jsr CHROUT
-    lda #'o'
-    jsr CHROUT
-    lda #'r'
-    jsr CHROUT
-    jsr CONSMOVEUP
-    rts
-.endproc
-
-;---------------------------
-; input: X - pozycja w wierszu polecenia
-; output: X - jest na literze za poprawną komendą albo na początkowej literze jeśli to nie jest ta komenda
-;         CF=1 to jest ta komenda, CF=0 to nie jest ta komenda
-;
-.proc CHKCMD
-    txa
-    pha
-    ldy #0
-    lda (CMDPTR),y
-    sta PATERLEN
-    bne :++             ;to jest skok bezwzględny
-
-:   jsr CONSGETCHAR
-    iny
-    cmp (CMDPTR),y
-    bne :++             ;litera się nie zgadza, to źle
-    inx
-    cpy PATERLEN
-    bcs :+++            ;Y jest równe długości wzorca, to dobrze bo wszystkie litery się zgadzały
-:   cpx CMDLEN
-    bcc :--             ;nie koniec więc szukam dalej
-:   pla
-    tax
-    clc     ;to nie jest ta komenda
-    rts
-
-:   pla     ;znalazłem i CF jest już ustawione
-    rts
 .endproc
 
