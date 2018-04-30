@@ -15,45 +15,33 @@
 ;    i dopiero po wciśnięciu RETURN, następuje odczyt liter z ekranu.
 ; 4. 
 
-.export CONSINIT, LINELEN, CMDLINE
-.import MVCRSR, STROUT, CRSRON, CONSLINEOUT, CURCOL
-
-.segment "BSS"
-LINELEN:  .res 1
-CMDLINE:  .res 38
-
-.segment "RODATA"
-READYSTR:   .byte "ready.",0
+.export CONSLINEOUT
+.import CRSPTR:zeropage, LINELEN, CMDLINE
 
 .segment "CODE"
-.proc CONSINIT
-    ldx #40
-    lda #$20
-:   dex
-    sta $6000,x         ;pasek stanu na górze i podwójny pasek konsoli na dole
-    sta $6000+23*40,x
-    sta $6000+24*40,x
-    bne :-
-    ldx #40
-    lda #5              ;zielone litery  na pasku stanu i konsoli
-:   dex
-    sta $D800,x         ;pasek stanu na górze i podwójny pasek konsoli na dole
-    sta $D800+23*40,x
-    sta $D800+24*40,x
-    bne :-
+.proc CONSLINEOUT
+    ldy #0
+    lda #(']'-$40)
+    sta (CRSPTR),y
     ldx #0
-    stx LINELEN
+    lda LINELEN
+    beq :+++            ;tylko czyszczenie
+:   iny
+    lda CMDLINE,x
+    cmp #$40
+    bcc :+
+    sbc #$40
+:   sta (CRSPTR),y
+    inx
+    cpx LINELEN
+    bne :--
 
-    ldx #0
-    ldy #23
-    jsr MVCRSR
-    lda #<READYSTR
-    ldy #>READYSTR
-    jsr STROUT
-    ldx #1
-    ldy #24
-    jsr MVCRSR
-    jsr CONSLINEOUT
-    jsr CRSRON
+:   lda #$20
+:   iny
+    sta (CRSPTR),y
+    inx
+    cpx #39
+    bne :-
+
     rts
 .endproc

@@ -12,14 +12,13 @@
 ; zeropage: 2
 ; reentrant: no
 
-.export CHKCMD, CMDLEN
-.import CONSGETCHAR
+.export CHKCMD
+.import CMDLINE, LINELEN
 
 .segment "ZEROPAGE":zeropage
 CMDPTR:   .res 2
 
 .segment "BSS"
-CMDLEN:   .res 1
 PATERLEN: .res 1
 CMDNUM:   .res 1
 CMDXPOS:  .res 1
@@ -36,14 +35,14 @@ CMDXPOS:  .res 1
 
 nastepna_komenda:
     sta PATERLEN
-:   jsr CONSGETCHAR
+:   lda CMDLINE,x
     iny
     cmp (CMDPTR),y
     bne to_nie_ta_komenda             ;litera się nie zgadza, to źle
     inx
     cpy PATERLEN
     bcs wszystkie_litery_zgodne       ;Y jest równe długości wzorca, to dobrze bo wszystkie litery się zgadzały
-    cpx CMDLEN
+    cpx LINELEN
     bcc :-              ;nie koniec więc szukam dalej
 
 to_nie_ta_komenda:
@@ -64,7 +63,7 @@ to_nie_ta_komenda:
     rts
 
 wszystkie_litery_zgodne:
-    lda CMDNUM     ;znalazłem i CF jest już ustawione
+    lda CMDNUM          ;znalazłem i CF jest już ustawione
     rts
 .endproc
 

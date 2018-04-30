@@ -14,8 +14,8 @@
 .export SUNMUTEX, MOONMUTEX, TOWNMUTEX
 .import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
 .import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, NEWKEYS, KEYMOD
-.import CONSINIT, CONSGETCHAR, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
-.import CHKCMD, CMDLEN
+.import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
+.import CMDLINE, CHKCMD, CURROW, CURCOL, CRSPTR:zeropage, STROUT, CONSLINEOUT
 
 .segment "DATA"
 SUNMUTEX:   .byte 0
@@ -24,6 +24,8 @@ TOWNMUTEX:  .byte 0
 
 .segment "RODATA"
 CMDSTAB:   .byte 4,"stop",5,"start",0
+JOBSSTR:   .byte "jobs:",0
+ERRORSTR:  .byte "error",0
 
 .segment "CODE"
     .org $0801
@@ -44,7 +46,7 @@ CMDSTAB:   .byte 4,"stop",5,"start",0
     sta $D011
     lda #0           ;czarne tło dla konsoli
     sta $D021
-    lda #5           ;zielone
+    lda #5           ;zielone tło dla konsoli dla znaków w inwersji
     sta $D022
     lda #6           ;ciemno niebieskie
     sta $D023
@@ -73,9 +75,26 @@ CMDSTAB:   .byte 4,"stop",5,"start",0
 
     ; --- pętla zadania głównego czyli obsługa paska stanu i konsoli
 main_loop:
+    lda CURROW
+    pha
+    lda CURCOL
+    pha
+    lda CRSPTR+1
+    pha
+    lda CRSPTR
+    pha
     jsr print_number_of_jobs
     jsr SCANKBD
     jsr print_keyboard_state
+    pla
+    sta CRSPTR
+    pla
+    sta CRSPTR+1
+    pla
+    sta CURCOL
+    pla
+    sta CURROW
+
     jsr analyse_keys
     ldy #1
     jsr WAIT
@@ -89,16 +108,9 @@ main_loop:
     ldx #2
     ldy #0
     jsr MVCRSR
-    lda #'j'
-    jsr CHROUT
-    lda #'o'
-    jsr CHROUT
-    lda #'b'
-    jsr CHROUT
-    lda #'s'
-    jsr CHROUT
-    lda #':'
-    jsr CHROUT
+    lda #<JOBSSTR
+    ldy #>JOBSSTR
+    jsr STROUT
     jsr JOBS
     txa
     clc
@@ -166,12 +178,15 @@ cos_jest_w_buforze_klawiatury:
     bne get_next_key
     jsr CRSROFF
     lda LINELEN
-    sta CMDLEN
-    jsr CONSMOVEUP
-    lda CMDLEN
     beq :+          ;nic do roboty
     jsr DOCMD
-:   jsr CRSRON
+:   ldx #0
+    stx LINELEN
+    inx
+    ldy #24
+    jsr MVCRSR
+    jsr CONSLINEOUT
+    jsr CRSRON
     jmp get_next_key
 .endproc
 
@@ -184,10 +199,10 @@ cos_jest_w_buforze_klawiatury:
     cmp #1                  ;A=1 to START
     beq :+
 
-    jsr CONSGETCHAR         ;A=0 to STOP
+    lda CMDLINE,x           ;A=0 to STOP
     cmp #$20
     inx
-    jsr CONSGETCHAR
+    lda CMDLINE,x
     cmp #'1'
     bcc invalid_command
     cmp #'7'
@@ -195,12 +210,13 @@ cos_jest_w_buforze_klawiatury:
     sec
     sbc #'0'
     jsr STOPJOB
+    jsr CONSMOVEUP
     rts
 
-:   jsr CONSGETCHAR         ;obsługa komendy START
+:   lda CMDLINE,x           ;obsługa komendy START
     cmp #$20
     inx
-    jsr CONSGETCHAR
+    lda CMDLINE,x
     cmp #'s'
     beq uruchom_sun
     cmp #'m'
@@ -209,19 +225,13 @@ cos_jest_w_buforze_klawiatury:
     beq uruchom_town
 
 invalid_command:
+    jsr CONSMOVEUP
     ldx #0             ;ERROR
     ldy #24
     jsr MVCRSR
-    lda #'e'
-    jsr CHROUT
-    lda #'r'
-    jsr CHROUT
-    lda #'r'
-    jsr CHROUT
-    lda #'o'
-    jsr CHROUT
-    lda #'r'
-    jsr CHROUT
+    lda #<ERRORSTR
+    ldy #>ERRORSTR
+    jsr STROUT
     jsr CONSMOVEUP
     rts
 
@@ -231,15 +241,16 @@ uruchom_sun:
     lda #>TASK2
     ldx #<TASK2
     jsr STARTJOB
-:   rts
+:   jsr CONSMOVEUP
+    rts
 
 uruchom_moon:
     lda MOONMUTEX
     bne :+
     lda #>TASK3     ;tu nie ma zabezpieczenia przed uruchomieniem drugiej kopii tego zadania
     ldx #<TASK3
-    jsr STARTJOB
-:   rts
+:   jsr CONSMOVEUP
+    rts
 
 uruchom_town:
     lda TOWNMUTEX
@@ -247,6 +258,7 @@ uruchom_town:
     lda #>TASK4     ;tu nie ma zabezpieczenia przed uruchomieniem drugiej kopii tego zadania
     ldx #<TASK4
     jsr STARTJOB
-:   rts
+:   jsr CONSMOVEUP
+    rts
 .endproc
 

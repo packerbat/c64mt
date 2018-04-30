@@ -5,7 +5,7 @@
 ; 
 
 .export CONSMOVEUP
-.import MVCRSR, CHROUT, LINELEN, CRSRPOS
+.import MVCRSR, CURCOL, LINELEN
 
 ;-----------------------------
 ; input: X - pozycja litery na ekranie
@@ -22,14 +22,6 @@
     sta $D800+24*40,x
     dex
     bpl :-
-    ldx #0
-    ldy #24
-    jsr MVCRSR
-    lda #']'
-    jsr CHROUT
-    ldx #0
-    stx LINELEN
-    stx CRSRPOS
     rts
 .endproc
 

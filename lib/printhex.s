@@ -1,8 +1,8 @@
 ;----------------------------
 ; Procedura PRINTHEX wyświetla podaną wartość (A) jako hex w miejscu bieżącego kursora (CRSPTR, CURROW, CURCOL)
-; input: A=wartość, CRSPTR
-; output: Y=?, X=?, A=?, NZCIDV=011---
-; stack: 7
+; input: A=wartość
+; output: Y=?, X=preserved, A=?
+; stack: 3
 ; reentrant: no
 
 .export PRINTHEX

@@ -12,7 +12,7 @@
 ; 
 
 .export CONSKEYS
-.import CRSRON, CRSROFF, CRSRPOS, LINELEN, MVCRSR, CHROUT
+.import CRSRON, CRSROFF, CURCOL, LINELEN, MVCRSR, CHROUT, CONSLINEOUT, CMDLINE
 
 ;-------------------------------------
 ; pobiera i analizyje klawisze zgromadzone w buforze klawiatury
@@ -20,36 +20,37 @@
 ;
 .segment "CODE"
 .proc CONSKEYS
-    cmp #96     ;pomijam wciśnięcia
+    cmp #96                      ;pomijam wciśnięcia
     bcs nie_dotyczy_konsoli
-    cmp #32     ;na razie znaki sterujące pomijam
-    bcc znaki_sterujace
     pha
     jsr CRSROFF
     pla
+    cmp #32
+    bcc znaki_sterujace
     ldx LINELEN
     cpx #38
-    bcs klawisz_obsluzony         ;skończyło się miejsce więc milcząco ignoruję
-    pha
-    lda CRSRPOS
-    cmp LINELEN
+    bcs klawisz_obsluzony        ;skończyło się miejsce więc milcząco ignoruję
+    ldx CURCOL
+    dex
+    cpx LINELEN
     beq :++          ;przesuwanie nie jest potrzebne
 
-    ldx #38
-:   lda $6000+24*40,x
-    sta $6000+24*40+1,x
-    dex
-    cpx CRSRPOS
-    bne :-
-
-:   ldx CRSRPOS
+    pha
+    ldx LINELEN
     inx
-    ldy #24
-    jsr MVCRSR
+:   lda CMDLINE-2,x
+    sta CMDLINE-1,x
+    dex
+    cpx CURCOL
+    bne :-
     pla
-    jsr CHROUT
+
+:   ldx CURCOL
+    dex
+    sta CMDLINE,x
     inc LINELEN
-    inc CRSRPOS
+    jsr CONSLINEOUT
+    inc CURCOL
 
 klawisz_obsluzony:
     jsr CRSRON
@@ -57,57 +58,61 @@ klawisz_obsluzony:
     rts
 
 nie_dotyczy_konsoli:
+    pha
+    jsr CRSRON
+    pla
     sec
     rts                 ;konsola bo 
 
 ; --- program reaguje na następujące znaki:
 znaki_sterujace:
     cmp #30
-    beq to_jest_crsr_left
+    bne moze_crsr_right
+    lda CURCOL
+    cmp #1
+    beq :+
+    dec CURCOL
+:   jmp klawisz_obsluzony
+
+moze_crsr_right:
     cmp #29
-    beq to_jest_crsr_right
-    cmp #20
-    beq to_jest_del
+    bne moze_home
+    ldx CURCOL
+    dex
+    cpx LINELEN
+    beq :+
+    inc CURCOL
+:   jmp klawisz_obsluzony
+
+moze_home:
     cmp #19
+    bne moze_del
+    lda CURCOL
+    cmp #1
+    beq :+
+    lda #1
+    sta CURCOL
+:   jmp klawisz_obsluzony
+
+moze_del:
+    cmp #20
     bne nie_dotyczy_konsoli
-
-to_jest_home:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp #0
-    beq :+
-    lda  #0
-    sta CRSRPOS
-:   jmp klawisz_obsluzony
-
-to_jest_crsr_left:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp #0
-    beq :+
-    dec CRSRPOS
-:   jmp klawisz_obsluzony
-
-to_jest_crsr_right:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp LINELEN
-    beq :+
-    inc CRSRPOS
-:   jmp klawisz_obsluzony
-
-to_jest_del:
-    jsr CRSROFF
-    lda CRSRPOS
-    cmp LINELEN
+    lda LINELEN
     beq :++
+    ldx CURCOL
+    cpx LINELEN     ;jestem na ostatnim znaku, tylko skracam i nic nie przesuwam
+    beq :++
+    dex
+    cpx LINELEN     ;jestem za ostatnim znakiem, nic nie robię
+    beq :+++
 
-    dec LINELEN
-    ldx CRSRPOS
-:   lda $6000+24*40+2,x
-    sta $6000+24*40+1,x
+:   lda CMDLINE+1,x       ;przesuwanie jest konieczne
+    sta CMDLINE,x
     inx
-    cpx #38
+    cpx LINELEN
     bne :-
+
+:   dec LINELEN
+    jsr CONSLINEOUT
 :   jmp klawisz_obsluzony
 .endproc
