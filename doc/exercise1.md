@@ -67,10 +67,14 @@ Błędna komenda zwróci ERROR, dobra komenda wykona się bez żadnego komunikat
 
 
 Możliwość zamykania procesów dobitnie pokazuje, jak przyspieszają zadania, które jeszcze
-nie zostały zamknięte. Im mniej procesów tym szybciej pracują pozostałe.
+nie zostały zamknięte. Im mniej procesów tym szybciej one pracują.
 Jest to efekt stosowanie blokujących funkcji WAIT. Oczywiście te blokujące funkcje
 WAIT nie blokują innych wątków a jedynie wątek, który ją wywołał. Blokująca funkcja WAIT
 jest zła z jeszcze jednego powodu. W środowisku wielozadaniowym taka funkcja może w każdej
 chwili zostać przerwana przez inny proces a zatem czas wykonania takiej funkcji jest
 nieprzewidywalny. Te wady trzeba usunąć w pierwszej kolejności.
+
+Poniższy diagram czasowy pokazuje jak działa program z ćwiczenia nr 1.
+
+![exercise 1 time diagram](ex1time.svg)
 
