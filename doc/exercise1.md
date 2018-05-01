@@ -61,7 +61,7 @@ Konsola pozwala pisać komendy:
 2. START <job> uruchamia proces podanego typu, <job> może być literą S, M albo T (odpowiednio
    słońce, księżyc, wieżowce).
 
-Błędna komenda zwróci ERROR, dobra komenda się wykona bez żadnego komunikatu.
+Błędna komenda zwróci ERROR, dobra komenda wykona się bez żadnego komunikatu.
 
 ![sunandmoon.prg screenshot](sunandmoon.png)
 
