@@ -1,4 +1,4 @@
-EXAMPLES = dbuf.prg dbuft.prg sunandmoon
+EXAMPLES = dbuf.prg dbuft.prg sunandmoon samevents
 TARGETS = lib c64mt.d64 $(EXAMPLES)
 
 all: $(TARGETS)
@@ -8,7 +8,8 @@ c64mt.d64: $(EXAMPLES)
 	c1541 -format diskname,id d64 c64mt.d64 -attach c64mt.d64 \
 		-write dbuf.prg dbuf \
 		-write dbuft.prg dbuft \
-		-write ex1/sunandmoon.prg sunandmoon
+		-write ex1/sunandmoon.prg sunandmoon \
+		-write ex2/samevents.prg samevents
 
 dbuf.prg: dbuf.o tabnar.o ../lib/c64mt.lib
 	ld65 -v -Ln dbuf.lbl -C c64mt.cfg -o $@ dbuf.o tabnar.o ../lib/c64mt.lib c64.lib
@@ -21,6 +22,9 @@ lib:
 
 sunandmoon:
 	make -C ex1
+
+samevents:
+	make -C ex2
 
 %.o: %.s
 	ca65 -t c64 -v -g -o $@ $<
