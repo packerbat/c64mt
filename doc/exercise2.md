@@ -26,12 +26,28 @@ programista będzie musiał zadbać aby proces nasłuchiwał tylko na te zdarzen
 które sam uruchomił. Oczywiście w przyszłości trzeba będzie wprowadzić identyfikatory
 procesów i przypisywać je do zasobów zajętych przez dany proces.
 
-Przy tak mocnych założeniach upraszczających, unixowa funkcja select (poll, epoll) czy
-windowsowe WaitForEvent upraszcza się do podania bitowej maski zdarzeń na jaką
+Przy tak mocnych założeniach upraszczających, unixowa funkcja `select` (`poll`, `epoll`) czy
+windowsowe `WaitForEvent` upraszcza się do podania bitowej maski zdarzeń na jakie
 czeka dany proces. Będzie to oznaczało, że deskryptor zadania wydłuży się zaledwie
 o 1 bajt, w którym będą zdefiniowane flagi sześciu zdarzeń. Jeśli jakieś zdarzenie
 (lub kilka na raz) zaistnieje to proces dostanie bitowe znaczniki (np. w akumulatorze),
 informujące co się stało.
+
+Robię jeszcze jedno założenie upraszczające, które polega na tym, że przełączanie
+zadań ma prawo wykonać się w kontekście dowolnego zdania. To znaczy, że funkcja
+`select` nie przełączy się na proces T0 a dopiero potem na inne zadanie, które 
+także doczekało się na swoje zdarzenie. Takie podejście wydaje się rozsądne bo
+minimalizuje przełączanie zadań.
+
+Taki model nie gwarantuje szybkiej reakcji na zdarzenie bo jeśli proces zostanie
+obudzony zdarzeniem i będzie długo wykonywał swoje zdania (powyżej 1/60 sekundy)
+to dopiero nowe przerwanie IRQ zmusi komputer do zmiany zadania. Jeśli takich
+długich procesów jest wiele to opóźnienie może być bardzo duże. Warto pomyśleć
+o priorytetach zdarzeń. Na przykład przerwanie zegarowe jest mniej ważne od przerwania
+rastrowego bo w przerwaniu rastrowym konieczna jest natychmiastowa zmiana położenia
+sprita w procesie multiplikacji spritów. Jeśli reakcja nie będzie natychmiastowa
+to multiplikacja się nie uda i niektóre postacie (lub ich fragmenty) nagle znikną
+z ekranu na ułamek sekundy.
 
 Poniższy diagram czasowy pokazuje jak działa program z ćwiczenia nr 2 (z znacznym
 uproszczeniu).
