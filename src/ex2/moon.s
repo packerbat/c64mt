@@ -2,7 +2,7 @@
 ; sekwencja uruchamiająca program bees
 
 .export TASK3
-.import WAIT, BITSOFF, BITSON, MOONMUTEX
+.import WAIT, BITSOFF, BITSON, MOONMUTEX, STARTTIMER, TASK_EVENTS, EVENTS
 
 SPRITENR = 1
 SHAPENR = $A1
@@ -426,14 +426,25 @@ BALISTA2: .word 0,220
     ora BITSON,x
     sta $D01B
 
+    lda #$40
+    sta TASK_EVENTS+2     ;czekam na zdarzenie przepełnienia zegara 2 !!!!!!!!!!
+    ldy #2
+    lda #8
+    jsr STARTTIMER
+
     lda #<BALISTA2
     sta SPPTR
     lda #>BALISTA2
     sta SPPTR+1
 
 :   jsr SETSPRITEPOS
-    ldy #14
-    jsr WAIT
+
+    lda #$BF
+    and EVENTS
+    sta EVENTS
+    lda #$40
+:   bit EVENTS
+    beq :-
 
     clc
     lda SPPTR       ;przesuwam wskaźnik do następnej pozycji w tablicy trajektorii
@@ -458,7 +469,7 @@ BALISTA2: .word 0,220
 :   ldy #0
     lda (STATUSPTR),y
     and #$40          ;test stop request
-    beq :--
+    beq :---
 
 koniec_MOON:
     ldx #SPRITENR   ;X = sprit number

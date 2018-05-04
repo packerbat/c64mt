@@ -12,7 +12,7 @@ otwarcie gniazda sieciowego, uruchomienie zegara itp. Dla uproszczenia stworzymy
 które będą istniały przez cały czas w systemie. Te zdarzenia to:
 
 1. 4 zegary programowe o rozdzielczości 1/60 sekundy,
-2. pojawił się klawisz w kolejce klawiatury,
+2. zmiana stanu klawiatury (wciśnięto lub puszczono klawisz),
 3. VIC-II wygenerował przerwanie typu raster.
 
 Oczywiście zegary nie będą "pracować" póki któryś z procesów nie uruchomi takiego
@@ -24,7 +24,7 @@ o procesach (pomijam tu informacje niezbędne do przełączania zadań) więc na
 nie będzie kontroli, który proces uruchomił dane zdarzenie (np. który zegar). To
 programista będzie musiał zadbać aby proces nasłuchiwał tylko na te zdarzenia,
 które sam uruchomił. Oczywiście w przyszłości trzeba będzie wprowadzić identyfikatory
-procesów i przypisywać je do zasobów zajętych przez dany proces.
+procesów i przypisywać je do zasobów zajętych przez dany proces. 
 
 Przy tak mocnych założeniach upraszczających, unixowa funkcja `select` (`poll`, `epoll`) czy
 windowsowe `WaitForEvent` upraszcza się do podania bitowej maski zdarzeń na jakie

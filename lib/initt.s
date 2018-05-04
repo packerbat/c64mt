@@ -2,11 +2,8 @@
 ; sekwencja inicjująca rozszerzenie basica
 
 .export INITT
-.import NRM, TXTPAGE, CLST, FILLCT, CIA2IRQMask, CIA1IRQMask, VICIRQMask, IRQ, NMI, COLDSTART
-
-.segment "ZEROPAGE":zeropage
-SRCPTR:   .res 2
-DSTPTR:   .res 2
+.import NRM, TXTPAGE, CLST, FILLCT, CIA2IRQMask, CIA1IRQMask, VICIRQMask, NMI, COLDSTART
+.import COPYPAGES
 
 .segment "CODE"
 .proc INITT
@@ -25,7 +22,7 @@ DSTPTR:   .res 2
     lda #$D0
     ldy #$40
     ldx #16          ;=2KB
-    jsr copy_pages
+    jsr COPYPAGES
     lda #$35         ;turn off KERNAL ROM and BASIC ROM and CHRACTER ROM, do not remove I/O at $D000-$DFFF
     sta $01
     lda #<NMI
@@ -36,10 +33,6 @@ DSTPTR:   .res 2
     sta $FFFC        ;Hardware COLD START Vector
     lda #>COLDSTART
     sta $FFFD
-    lda #<IRQ
-    sta $FFFE        ;Hardware IRQ Interrupt Vector
-    lda #>IRQ
-    sta $FFFF
     cli
 
     lda #$08
@@ -89,27 +82,5 @@ DSTPTR:   .res 2
 
     jsr NRM
 
-    rts
-.endproc
-
-;----------------------------
-; Copy X pages pointed by A to pages pointed by Y
-; modified: A,X,Y,P,SRCPTR,DSTPTR
-;
-.proc copy_pages
-    sta SRCPTR+1
-    sty DSTPTR+1
-    ldy #0              ;niepotrzebne ciągłe ustawianie
-    sty SRCPTR
-    sty DSTPTR
-
-:   lda (SRCPTR),y
-    sta (DSTPTR),y
-    dey
-    bne :-
-    inc SRCPTR+1
-    inc DSTPTR+1
-    dex
-    bne :-
     rts
 .endproc

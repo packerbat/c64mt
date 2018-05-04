@@ -3,7 +3,7 @@
 ; 
 
 .export TASK4
-.import WAIT, TXTPAGE, TOWNMUTEX
+.import WAIT, TXTPAGE, TOWNMUTEX, STARTTIMER, TASK_EVENTS, EVENTS
 
 .segment "DATA"
 SLUPKI:   .byte 8,8,8,0,12,12,4,4,4,4,   4,0,7,7,7,0,8,8,8,8,   0,14,14,14,16,16,16,13,13,13,   0,6,6,6,6,5,5,5,5,0
@@ -31,13 +31,25 @@ STATUSPTR: .word 0
     sta $4000+$3f*8+4
 
     jsr DRAW_SCEEN
-:   ldy #14
-    jsr WAIT
+
+    lda #$80
+    sta TASK_EVENTS+3     ;czekam na zdarzenie przepełnienia zegara 1 !!!!!!!!!!
+    ldy #3
+    lda #20
+    jsr STARTTIMER
+
+:   lda #$7F
+    and EVENTS
+    sta EVENTS
+    lda #$80
+:   bit EVENTS
+    beq :-
+
     jsr SCROLL_SCEEN
     ldy #0
     lda (STATUSPTR),y
     and #$40            ;test stop request, sprawdzanie tego to dobra wola procesu, jeśli nie sprawdza to nie zakończy
-    beq :-
+    beq :--
 
     lda (STATUSPTR),y
     ora #$20

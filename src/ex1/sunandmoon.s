@@ -12,8 +12,8 @@
 .include "../../lib/globals.inc"
 
 .export SUNMUTEX, MOONMUTEX, TOWNMUTEX
-.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
-.import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, NEWKEYS, KEYMOD
+.import IRQ, INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
+.import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, KEYMOD, NEWKEYS
 .import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
 .import CMDLINE, CHKCMD, CURROW, CURCOL, CRSPTR:zeropage, STROUT, CONSLINEOUT
 
@@ -39,6 +39,12 @@ ERRORSTR:  .byte "error",0
     ldx #$FF
     txs
     cld               ; i nigdy więcej nie włączaj
+    sei
+    lda #<IRQ
+    sta $FFFE        ;Hardware IRQ Interrupt Vector
+    lda #>IRQ
+    sta $FFFF
+    cli
     jsr INITT
 
     lda $D011        ;extended background mode
@@ -75,25 +81,9 @@ ERRORSTR:  .byte "error",0
 
     ; --- pętla zadania głównego czyli obsługa paska stanu i konsoli
 main_loop:
-    lda CURROW
-    pha
-    lda CURCOL
-    pha
-    lda CRSPTR+1
-    pha
-    lda CRSPTR
-    pha
     jsr print_number_of_jobs
     jsr SCANKBD
     jsr print_keyboard_state
-    pla
-    sta CRSPTR
-    pla
-    sta CRSPTR+1
-    pla
-    sta CURCOL
-    pla
-    sta CURROW
 
     jsr analyse_keys
     ldy #1
@@ -105,59 +95,81 @@ main_loop:
 .endproc
 
 .proc print_number_of_jobs
-    ldx #2
-    ldy #0
-    jsr MVCRSR
-    lda #<JOBSSTR
-    ldy #>JOBSSTR
-    jsr STROUT
+    lda #'j'-$40
+    sta $6002
+    lda #'o'-$40
+    sta $6003
+    lda #'b'-$40
+    sta $6004
+    lda #'s'-$40
+    sta $6005
+    lda #':'
+    sta $6005
     jsr JOBS
     txa
     clc
     adc #'0'
-    pha
+    sta $6008
+    lda #'/'
+    sta $6007
     tya
     clc
     adc #'0'
-    jsr CHROUT
-    lda #'/'
-    jsr CHROUT
-    pla
-    jsr CHROUT
+    sta $6006
     rts
 .endproc
 
 .proc print_keyboard_state
-    lda #7
-    pha                 ;TMPBIT = $101,x
-
-:   tsx
-    lda $101,x
-    asl
-    clc
-    adc #12
-    tax         ;wylicz kolumnę
-    ldy #0
-    jsr MVCRSR
-
-    tsx
-    ldy $101,x
-    lda NEWKEYS,y
-    jsr PRINTHEX
-
-    tsx
-    dec $101,x
-    bpl :-
-
-    ldx #12+8*2
-    ldy #0
-    jsr MVCRSR
-    lda #32
-    jsr CHROUT
+    ldx #12+0*2
+    lda NEWKEYS+0
+    jsr output_hex
+    ldx #12+1*2
+    lda NEWKEYS+1
+    jsr output_hex
+    ldx #12+2*2
+    lda NEWKEYS+2
+    jsr output_hex
+    ldx #12+3*2
+    lda NEWKEYS+3
+    jsr output_hex
+    ldx #12+4*2
+    lda NEWKEYS+4
+    jsr output_hex
+    ldx #12+5*2
+    lda NEWKEYS+5
+    jsr output_hex
+    ldx #12+6*2
+    lda NEWKEYS+6
+    jsr output_hex
+    ldx #12+7*2
+    lda NEWKEYS+7
+    jsr output_hex
+    ldx #13+8*2
     lda KEYMOD
-    jsr PRINTHEX
+    jsr output_hex
+    rts
+.endproc
 
-    pla             ;usuwam tymczasowe zmienne
+.proc output_hex
+    pha
+    lsr
+    lsr
+    lsr
+    lsr
+    cmp #10
+    bcc :+
+    adc #6
+:   adc #'0'
+    sta $6000,x
+    inx
+    pla
+    and #$0F
+    cmp #10
+    bcc :+
+    adc #6
+:   adc #'0'
+    sta $6000,x
+    inx
     rts
 .endproc
 

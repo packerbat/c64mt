@@ -20,7 +20,7 @@
 ;
 ; Przerwanie NMI ma prawo się zdarzyć w trakcie przełączania zadania i niczym to nie grozi.
 
-.include "globals.inc"
+.include "../../lib/globals.inc"
 
 .export IRQ, CIA1IRQMask, CIA1IRQState, VICIRQMask, VICIRQState, JiffyClock
 .export CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE

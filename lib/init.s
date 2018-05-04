@@ -3,13 +3,7 @@
 
 .export INIT
 .import HGR, VIDPAGE, CLS, CIA2IRQMask, CIA1IRQMask, VICIRQMask, IRQ, NMI, COLDSTART
-
-.segment "DATA"
-IRQPRESC: .byte 30
-
-.segment "ZEROPAGE":zeropage
-SRCPTR:   .res 2
-DSTPTR:   .res 2
+.import COPYPAGES
 
 .segment "CODE"
 .proc INIT
@@ -28,7 +22,7 @@ DSTPTR:   .res 2
     lda #$D8
     ldy #$90
     ldx #16          ;=2KB
-    jsr copy_pages
+    jsr COPYPAGES
     lda #$35         ;turn off KERNAL ROM and BASIC ROM and CHRACTER ROM, do not remove I/O at $D000-$DFFF
     sta $01
     lda #<NMI
@@ -89,27 +83,5 @@ DSTPTR:   .res 2
     jsr CLS
 
     jsr HGR
-    rts
-.endproc
-
-;----------------------------
-; Copy X pages pointed by A to pages pointed by Y
-; modified: A,X,Y,P,SRCPTR,DSTPTR
-;
-.proc copy_pages
-    sta SRCPTR+1
-    sty DSTPTR+1
-    ldy #0              ;niepotrzebne ciągłe ustawianie
-    sty SRCPTR
-    sty DSTPTR
-
-:   lda (SRCPTR),y
-    sta (DSTPTR),y
-    dey
-    bne :-
-    inc SRCPTR+1
-    inc DSTPTR+1
-    dex
-    bne :-
     rts
 .endproc

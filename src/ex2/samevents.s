@@ -12,10 +12,10 @@
 .include "../../lib/globals.inc"
 
 .export SUNMUTEX, MOONMUTEX, TOWNMUTEX
-.import INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
-.import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, NEWKEYS, KEYMOD
+.import IRQ, INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
+.import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, KBDEVENT, GETKEY, NEWKEYS, KEYMOD, EVENTS
 .import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
-.import CMDLINE, CHKCMD, CURROW, CURCOL, CRSPTR:zeropage, STROUT, CONSLINEOUT
+.import CMDLINE, CHKCMD, CURROW, CURCOL, CRSPTR:zeropage, STROUT, CONSLINEOUT, TASK_EVENTS, STARTTIMER
 
 .segment "DATA"
 SUNMUTEX:   .byte 0
@@ -39,6 +39,12 @@ ERRORSTR:  .byte "error",0
     ldx #$FF
     txs
     cld               ; i nigdy więcej nie włączaj
+    sei
+    lda #<IRQ
+    sta $FFFE        ;Hardware IRQ Interrupt Vector
+    lda #>IRQ
+    sta $FFFF
+    cli
     jsr INITT
 
     lda $D011        ;extended background mode
@@ -72,92 +78,85 @@ ERRORSTR:  .byte "error",0
 
 .proc TASK1
     jsr CONSINIT
+    lda #$18
+    sta TASK_EVENTS     ;czekam na zdarzenie zmiany stanu klawiatury !!!!!!!!!!!
+    ldy #0
+    lda #30
+    jsr STARTTIMER
 
     ; --- pętla zadania głównego czyli obsługa paska stanu i konsoli
 main_loop:
-    lda CURROW
-    pha
-    lda CURCOL
-    pha
-    lda CRSPTR+1
-    pha
-    lda CRSPTR
-    pha
     jsr print_number_of_jobs
-    jsr SCANKBD
-    jsr print_keyboard_state
-    pla
-    sta CRSPTR
-    pla
-    sta CRSPTR+1
-    pla
-    sta CURCOL
-    pla
-    sta CURROW
+    jsr print_event_state
+    ;jsr SELECT
 
+    lda #$E7
+    and EVENTS
+    sta EVENTS
+    lda #$18
+:   bit EVENTS
+    beq :-
+
+    lda #$08
+    bit EVENTS
+    beq :+
+    jsr KBDEVENT
     jsr analyse_keys
-    ldy #1
-    jsr WAIT
-    dec BLINKCNT
-    bne :+
+    jmp main_loop
+
+:   lda #$10
+    bit EVENTS
+    beq main_loop
     jsr CRSRNEG
-:   jmp main_loop
+    jmp main_loop
 .endproc
 
 .proc print_number_of_jobs
-    ldx #2
-    ldy #0
-    jsr MVCRSR
-    lda #<JOBSSTR
-    ldy #>JOBSSTR
-    jsr STROUT
+    lda #'j'-$40
+    sta $6007
+    lda #':'
+    sta $6008
     jsr JOBS
     txa
     clc
     adc #'0'
-    pha
+    sta $600B
+    lda #'/'
+    sta $600A
     tya
     clc
     adc #'0'
-    jsr CHROUT
-    lda #'/'
-    jsr CHROUT
-    pla
-    jsr CHROUT
+    sta $6009
     rts
 .endproc
 
-.proc print_keyboard_state
-    lda #7
-    pha                 ;TMPBIT = $101,x
+.proc print_event_state
+    ldx #13
+    lda EVENTS
+    jsr output_hex
+    rts
+.endproc
 
-:   tsx
-    lda $101,x
-    asl
-    clc
-    adc #12
-    tax         ;wylicz kolumnę
-    ldy #0
-    jsr MVCRSR
-
-    tsx
-    ldy $101,x
-    lda NEWKEYS,y
-    jsr PRINTHEX
-
-    tsx
-    dec $101,x
-    bpl :-
-
-    ldx #12+8*2
-    ldy #0
-    jsr MVCRSR
-    lda #32
-    jsr CHROUT
-    lda KEYMOD
-    jsr PRINTHEX
-
-    pla             ;usuwam tymczasowe zmienne
+.proc output_hex
+    pha
+    lsr
+    lsr
+    lsr
+    lsr
+    cmp #10
+    bcc :+
+    adc #6
+:   adc #'0'
+    sta $6000,x
+    inx
+    pla
+    and #$0F
+    cmp #10
+    bcc :+
+    adc #6
+:   adc #'0'
+    sta $6000,x
+    inx
     rts
 .endproc
 

@@ -11,11 +11,11 @@ c64mt.d64: $(EXAMPLES)
 		-write ex1/sunandmoon.prg sunandmoon \
 		-write ex2/samevents.prg samevents
 
-dbuf.prg: dbuf.o tabnar.o ../lib/c64mt.lib
-	ld65 -v -Ln dbuf.lbl -C c64mt.cfg -o $@ dbuf.o tabnar.o ../lib/c64mt.lib c64.lib
+dbuf.prg: dbuf.o irq.o tabnar.o ../lib/c64mt.lib
+	ld65 -v -Ln dbuf.lbl -C c64mt.cfg -o $@ dbuf.o irq.o tabnar.o ../lib/c64mt.lib c64.lib
 
-dbuft.prg: dbuft.o ../lib/c64mt.lib
-	ld65 -v -Ln dbuft.lbl -C c64mt.cfg -o $@ dbuft.o ../lib/c64mt.lib c64.lib
+dbuft.prg: dbuft.o irq.o ../lib/c64mt.lib
+	ld65 -v -Ln dbuft.lbl -C c64mt.cfg -o $@ dbuft.o irq.o ../lib/c64mt.lib c64.lib
 
 lib:
 	make -C ../lib
@@ -30,4 +30,7 @@ samevents:
 	ca65 -t c64 -v -g -o $@ $<
 
 clean:
+	make -C ex1 clean
+	make -C ex2 clean
+	make -C ../lib clean
 	rm -f *.o *.prg *.lbl *.d64 *.bin *.seq
