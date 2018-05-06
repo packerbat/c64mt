@@ -32,10 +32,11 @@
 .include "globals.inc"
 
 .export STARTJOB
-.import CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE
+.import CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE, TASK_EVENTS
 
 .proc STARTJOB
     php                 ; PS dostępne jako lda $104,x
+    sei
     pha                 ; A dostępne jako lda $103,x
     txa
     pha                 ; X dostępne jako lda $102,x
@@ -89,19 +90,16 @@
     bcc :-              ;wcześniej sprawdziłem, że jest wolny slot więc CF zawsze będzie 0
 
     ; --- zapamiętanie nowego zadania
-:   lda $102,x          ; pobranie PCL
+:   lda #0
+    sta TASK_EVENTS,y   ; nowe zadanie nie czeka na zdarzenia
+    lda $102,x          ; pobranie PCL
     sta TASK_REGPCL,y
     lda $103,x          ; pobranie PCH
     sta TASK_REGPCH,y
-    lda #0              ; rejestry A będzie 0 na starcie
+    lda #0              ; rejestry A,X,Y na starcei będą miały wartość 0
     sta TASK_REGA,y
-    tya
-    clc
-    adc #<TASK_STATE
-    sta TASK_REGX,y     ; na starcie rejestr X będzie zawierał młoszy adres statusu
-    lda #0
-    adc #>TASK_STATE
-    sta TASK_REGY,y     ; a rejestr Y będzie zawierał starszy adres statusu
+    sta TASK_REGX,y
+    sta TASK_REGY,y
     lda $104,x          ; PS będzie równe staremu zadaniu
     sta TASK_REGPS,y
     tya
@@ -116,13 +114,6 @@
     clc
     adc #1              ;224-y*32   zadanie 0 jest uprzywilejowane i dostaje większy stos (64 bajty)
     sta TASK_REGSP,y    ; pozostałe zadania (max 6 sztuk) dostaną po 32 bajty
-
-    ; --- zwolnienie miejsca na stosie
-    txa
-    clc
-    adc #6          ;A, X, Y, PS, PC
-    tax
-    txs
 
     ; uruchomienie nowego zdania, Y = numer nowego zadania (czyli 1)
     ldx TASK_REGSP,y

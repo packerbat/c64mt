@@ -1,15 +1,20 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.export TASK3
-.import WAIT, BITSOFF, BITSON, MOONMUTEX, STARTTIMER, TASK_EVENTS, EVENTS
+.export TASK3, MOONSLOT
+.import BITSOFF, BITSON, STARTTIMER, STOPTIMER, SELECT, JOBDONE, TASK_STATE, CURRTASK
 
 SPRITENR = 1
 SHAPENR = $A1
 
 .segment "ZEROPAGE":zeropage
 SPPTR:     .word 0
-STATUSPTR: .word 0
+
+.segment "DATA"
+MOONSLOT:   .byte 0
+
+.segment "BSS"
+LASTEVENTS:   .res 1
 
 .segment "RODATA"
 .linecont +
@@ -391,9 +396,8 @@ BALISTA2: .word 0,220
 
 .segment "CODE"
 .proc TASK3
-    inc MOONMUTEX
-    stx STATUSPTR
-    sty STATUSPTR+1
+    lda CURRTASK
+    sta MOONSLOT
 
     ; init sprite
     ldx #62         ;copy sprite
@@ -426,8 +430,6 @@ BALISTA2: .word 0,220
     ora BITSON,x
     sta $D01B
 
-    lda #$40
-    sta TASK_EVENTS+2     ;czekam na zdarzenie przepełnienia zegara 2 !!!!!!!!!!
     ldy #2
     lda #8
     jsr STARTTIMER
@@ -437,14 +439,20 @@ BALISTA2: .word 0,220
     lda #>BALISTA2
     sta SPPTR+1
 
-:   jsr SETSPRITEPOS
-
-    lda #$BF
-    and EVENTS
-    sta EVENTS
+main_loop_MOON:
+    jsr SETSPRITEPOS
     lda #$40
-:   bit EVENTS
-    beq :-
+    jsr SELECT                  ;po powrocie w A będą flagi zdarzeń, które rzeczywiście miały miejsce
+    sta LASTEVENTS
+
+    lda #$40
+    bit LASTEVENTS
+    beq koniec_MOON              ;wyszedł z SELECT ale nie ustawił flagi TIMER2 więc to KILL
+
+    ldy MOONSLOT
+    lda TASK_STATE,y
+    and #$40          ;test stop request
+    bne koniec_MOON
 
     clc
     lda SPPTR       ;przesuwam wskaźnik do następnej pozycji w tablicy trajektorii
@@ -465,25 +473,18 @@ BALISTA2: .word 0,220
     sta SPPTR
     lda #>BALISTA2
     sta SPPTR+1
-
-:   ldy #0
-    lda (STATUSPTR),y
-    and #$40          ;test stop request
-    beq :---
+:   jmp main_loop_MOON
 
 koniec_MOON:
     ldx #SPRITENR   ;X = sprit number
     lda $D015       ;enable sprite
     and BITSOFF,x
     sta $D015
-
-    lda (STATUSPTR),y
-    ora #$20
-    sta (STATUSPTR),y
-    dec MOONMUTEX
-
-:   nop
-    jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event
+    ldy #2
+    jsr STOPTIMER
+    lda #0
+    sta MOONSLOT
+    jmp JOBDONE
 .endproc
 
 .proc SETSPRITEPOS

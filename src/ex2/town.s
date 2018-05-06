@@ -2,21 +2,25 @@
 ; Proces wyświetlający przesuwające się wieżowce
 ; 
 
-.export TASK4
-.import WAIT, TXTPAGE, TOWNMUTEX, STARTTIMER, TASK_EVENTS, EVENTS
+.export TASK4, TOWNSLOT
+.import TXTPAGE, STARTTIMER, STOPTIMER, SELECT, JOBDONE, TASK_STATE, CURRTASK
 
 .segment "DATA"
 SLUPKI:   .byte 8,8,8,0,12,12,4,4,4,4,   4,0,7,7,7,0,8,8,8,8,   0,14,14,14,16,16,16,13,13,13,   0,6,6,6,6,5,5,5,5,0
 
 .segment "ZEROPAGE":zeropage
 NPTR:  .res 2
-STATUSPTR: .word 0
+
+.segment "DATA"
+TOWNSLOT:   .byte 0
+
+.segment "BSS"
+LASTEVENTS:   .res 1
 
 .segment "CODE"
 .proc TASK4
-    inc TOWNMUTEX
-    stx STATUSPTR
-    sty STATUSPTR+1
+    lda CURRTASK
+    sta TOWNSLOT
     jsr CLRWIN
 
     lda #%11111111      ;zmiana litery $3f na segment wieżowca
@@ -32,32 +36,33 @@ STATUSPTR: .word 0
 
     jsr DRAW_SCEEN
 
-    lda #$80
-    sta TASK_EVENTS+3     ;czekam na zdarzenie przepełnienia zegara 1 !!!!!!!!!!
     ldy #3
     lda #20
     jsr STARTTIMER
 
-:   lda #$7F
-    and EVENTS
-    sta EVENTS
+main_loop_TOWN:
     lda #$80
-:   bit EVENTS
-    beq :-
+    jsr SELECT                  ;po powrocie w A będą flagi zdarzeń, które rzeczywiście miały miejsce
+    sta LASTEVENTS
+
+    lda #$80
+    bit LASTEVENTS
+    beq koniec_TOWN              ;wyszedł z SELECT ale nie ustawił flagi TIMER4 więc to KILL
+
+    ldy TOWNSLOT
+    lda TASK_STATE,y
+    and #$40          ;test stop request
+    bne koniec_TOWN
 
     jsr SCROLL_SCEEN
-    ldy #0
-    lda (STATUSPTR),y
-    and #$40            ;test stop request, sprawdzanie tego to dobra wola procesu, jeśli nie sprawdza to nie zakończy
-    beq :--
+    jmp main_loop_TOWN
 
-    lda (STATUSPTR),y
-    ora #$20
-    sta (STATUSPTR),y
-    dec TOWNMUTEX
-
-:   nop
-    jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event
+koniec_TOWN:
+    ldy #3
+    jsr STOPTIMER
+    lda #0
+    sta TOWNSLOT
+    jmp JOBDONE
 .endproc
 
 .proc CLRWIN

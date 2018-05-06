@@ -57,9 +57,9 @@ Informacje o stanie programu to:
 
 Konsola pozwala pisać komendy:
 
-1. STOP <nr slotu> zamyka proces o podanym numerze, <nr  slotu> może mieć wartość 1..6,
-2. START <job> uruchamia proces podanego typu, <job> może być literą S, M albo T (odpowiednio
-   słońce, księżyc, wieżowce).
+1. STOP <job> zamyka proces podanego typu, <job> może być literą S, M albo T (odpowiednio
+   słońce, księżyc, wieżowce),
+2. START <job> uruchamia proces podanego typu, <job> jak wyżej.
 
 Błędna komenda zwróci ERROR, dobra komenda wykona się bez żadnego komunikatu.
 

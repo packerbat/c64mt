@@ -44,7 +44,8 @@ TASK_REGSP:   .res MAXTASKS,$FF
 TASK_STATE:   .byte $80           ; STATE: b7=1 active, b7=0 empty, zerowe zadanie nigdy nie może być puste i nie można go zakończyć
               .res MAXTASKS-1,0   ;        b6=1 request for stop
                                   ;        b5=1 task terminated
-TASK_EVENTS:  .res MAXTASKS,0
+TASK_EVENTS:  .res MAXTASKS,0     ;watość różna od 0 oznacza, że proces jest zawieszony do czasu zajścia wskazanych tu zdarzeń
+
 CURRTASK:     .byte 0             ;numer bieżącego zadania w zakresie 0..3 (na razie)
 
 .segment "BSS"
@@ -171,7 +172,6 @@ przerwanie_od_CIA1:
     sta $6005
 
     ; --- zapamiętanie starego stanu klawiatury
-zwiekszenie_licznika:
 :   lda NEWKEYS+0
     sta LASTKEYS+0
     lda NEWKEYS+1
@@ -295,70 +295,75 @@ zwiekszenie_licznika:
 
     txa
     pha
+    tya
+    pha
 
     ; --- najpierw zamykam zadania, które potwierdziły swóje zamknięcie
-    lda TASK_STATE+(MAXTASKS-1)
-    ldx #MAXTASKS-2
-:   lda TASK_STATE,x
+    ldy #MAXTASKS-1
+:   lda TASK_STATE,y
+    bpl :+              ;pomijam puste sloty
     and #$20
     beq :+
     lda #0
-    sta TASK_STATE,x
-:   dex
+    sta TASK_STATE,y
+:   dey
     bne :--
 
-    ; --- spawdzam czy w ogóle przełączanie zadań jest potrzebne
-    lda TASK_STATE+(MAXTASKS-1)
-    ldx #MAXTASKS-2
-:   ora TASK_STATE,x
-    dex
-    bne :-
-    and #$80
-    bne sa_inne_zadania
-    lda CURRTASK
-    bne nie_zerowe
-    pla                 ;nie ma zadań 1..6, jest tylko 0 i jest ono aktywne
+    ; --- poszukiwanie zdania, które czeka na zdarzenia (nie pomijam T0 żeby wyjść z pętli ale je ignoruję)
+    ldy CURRTASK
+:   iny
+    cpy #MAXTASKS
+    bcc :+
+    ldy #0
+:   cpy CURRTASK
+    beq :+              ;wróciłem do CURRTASK i nic nie znalazłem czyli koniec poszukiwania
+    lda TASK_STATE,y
+    bpl :--             ;pomijam puste sloty
+    lda TASK_EVENTS,y
+    beq :--             ;to zadanie pomijam bo nie czeka w SELECT
+    and EVENTS
+    beq :--
+    sta TASK_REGA,y     ; A = tylko zdarzenia, na które czekał ten proces bo to jest pobudka z SELECT
+    eor EVENTS          ; w EVENTS neguję bit, który się zdarzył
+    sta EVENTS
+    lda #0
+    sta TASK_EVENTS,y   ; ale TASK_EVENTS zeruję całe bo już nie jestem w SELECT
+    jmp activate_task_in_y
+
+    ; --- teraz szukam zadania aktywnego (pomijam T0)
+:   cpy #0
+    beq activate_task_in_y      ;byłem w IDLE i żadne zadanie się nie doczekało na zdarzenie więc wracam do IDLE
+    ldy CURRTASK
+:   iny
+    cpy #MAXTASKS
+    bcc :+
+    ldy #1
+:   cpy CURRTASK
+    beq :+
+    lda TASK_STATE,y
+    bpl :--
+    lda TASK_EVENTS,y
+    bne :--                 ;to zadanie na coś czeka w SELECT więc nie jest aktywne
+    beq activate_task_in_y
+
+    ; --- nie znalazłem więc skacze do IDLE (to chyba można w przyszłości uprościć)
+:   ldy #0
+
+activate_task_in_y:
+    cpy CURRTASK
+    bne :+              ;czy zmiana zadania jest konieczna
+    pla
+    tay
+    pla
     tax
-    ;lda CIA1IRQMask
-    ;sta $DC0D          ; restore CIA#1 IRQ Mask
     pla
     rti
 
-nie_zerowe:     ;to się zdarzy gdy zabijemy ostatni proces
-    pla         ;usuwam zapamiętany X
-    pla         ;usuwam zapamiętany A
-    pla         ;usuwam zapamiętany PS
-    pla         ;usuwam zapamiętany PCL
-    pla         ;usuwam zapamiętany PCH
-    ldy #0
-    ; --- uruchomienie nowego zdania, Y = numer nowego zadania
-    ldx TASK_REGSP,y
-    txs                 ;od tej pory działamy na stosie nowego zadania
-    lda TASK_REGPCH,y
-    pha
-    lda TASK_REGPCL,y
-    pha
-    lda TASK_REGPS,y
-    pha
-    lda TASK_REGA,y     ;tu muszę użyć stosu bo inaczej nie odczytam A
-    pha
-    ldx TASK_REGX,y
-    lda TASK_REGY,y
+    ; --- zapamiętanie starego zadania
+:   lda CURRTASK
     sty CURRTASK
     tay
-    ;lda CIA1IRQMask
-    ;sta $DC0D          ; restore CIA#1 IRQ Mask
-    pla                 ; restore A
-    rti
-
-
-sa_inne_zadania:
-    tya
-    pha
-    tsx         ;Y=$101,x  X=$102,x  A=$103,x  PS=$104,x  PCL=$105,x  PCH=$106,x
-
-    ; --- zapamiętanie starego zadania
-    ldy CURRTASK
+    tsx                 ;Y=$101,x  X=$102,x  A=$103,x  PS=$104,x  PCL=$105,x  PCH=$106,x
     lda $105,x          ; pobranie PCL
     sta TASK_REGPCL,y
     lda $106,x          ; pobranie PCH
@@ -376,24 +381,8 @@ sa_inne_zadania:
     adc #6
     sta TASK_REGSP,y    ; SP wskazuje na adres przed skokiem dlatego podnoszę o 6
 
-    ; --- zwolnienie miejsca na stosie
-    ; tu mogłoby być 6 x PLA ale to zajmuje aż 24 cykle a poniższe rozwiązanie zajmujące też 6 bajtów - tylko 10 cykli
-    txa
-    clc
-    adc #6          ;A, X, Y, PS, PC
-    tax
-    txs
-
-    ; --- przełączenie zadań
-    ; Z wcześniejszego testu wiem, że mam conajmniej 2 niepuste sloty
-:   iny
-    cpy #MAXTASKS
-    bcc :+
-    ldy #0
-:   lda TASK_STATE,y
-    bpl :--
-
-    ; --- uruchomienie nowego zdania, Y = numer nowego zadania
+    ; --- wznowienie znalezionego zdania
+    ldy CURRTASK
     ldx TASK_REGSP,y
     txs                 ;od tej pory działamy na stosie nowego zadania
     lda TASK_REGPCH,y
@@ -406,7 +395,6 @@ sa_inne_zadania:
     pha
     ldx TASK_REGX,y
     lda TASK_REGY,y
-    sty CURRTASK
     tay
     ;lda CIA1IRQMask
     ;sta $DC0D          ; restore CIA#1 IRQ Mask

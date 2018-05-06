@@ -1,20 +1,12 @@
 ;---------------------------------------------------------- 
-; Sekwencja uruchamiająca program Sun & Moon.
-; Ta sekwencja uruchamia trzy zadania operujące na spritach
-; i środkowej części ekranu (nazwijmy ją ekranem graficznym)
-; Zaś sam proces główny przekształca się w proces konsoli i
-; paska stanu.
-;
-; Uwaga: proces konsoli i paska stanu używa jednozadaniowych
-; procedur MVCRSR, CHROUT i PRINTHEX. Może je bezpiecznie używać pod
-; warunkiem, że żadne inne zadanie z nich nie korzysta.
+; Proces wyświetlający przesuwające się wieżowce
+; 
 
-.include "../../lib/globals.inc"
-
-.import IRQ, INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
-.import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, KEYMOD, NEWKEYS
+.export TASK1
+.import STARTTIMER, SELECT, EVENTS, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
+.import JOBS, MVCRSR, CHROUT, PRINTHEX, KBDEVENT, GETKEY, NEWKEYS, KEYMOD, EVENTS
 .import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
-.import CMDLINE, CHKCMD, CURROW, CURCOL, CRSPTR:zeropage, STROUT, CONSLINEOUT
+.import CMDLINE, CHKCMD, CURROW, CURCOL, STROUT, CONSLINEOUT, STARTTIMER
 .import SUNSLOT, MOONSLOT, TOWNSLOT
 
 .segment "RODATA"
@@ -22,125 +14,63 @@ CMDSTAB:   .byte 4,"stop",5,"start",0
 JOBSSTR:   .byte "jobs:",0
 ERRORSTR:  .byte "error",0
 
+.segment "BSS"
+LASTEVENTS:   .res 1
+
 .segment "CODE"
-    .org $0801
-
-    .word $080D       ;wskaźnik to następnej linii
-    .word 2018        ;numer linii i jednocześnie rok powstania
-    .byte $9E         ;SYS token
-    .asciiz "(2063)"  ;SYS argument
-    .word 0           ;wskaźnik na następną linię, $0000 oznacza, że jest to ostania linia
-
-    ldx #$FF
-    txs
-    cld               ; i nigdy więcej nie włączaj
-    sei
-    lda #<IRQ
-    sta $FFFE        ;Hardware IRQ Interrupt Vector
-    lda #>IRQ
-    sta $FFFF
-    cli
-    jsr INITT
-
-    lda $D011        ;extended background mode
-    ora #$40
-    sta $D011
-    lda #0           ;czarne tło dla konsoli
-    sta $D021
-    lda #5           ;zielone tło dla konsoli dla znaków w inwersji
-    sta $D022
-    lda #6           ;ciemno niebieskie
-    sta $D023
-    lda #14          ;jasno niebieskie
-    sta $D024
-
-    lda #>TASK2       ;będę wracał przez RTI więc TASK2 a nie TASK2-1
-    ldx #<TASK2
-    jsr STARTJOB
-
-    lda #>TASK3
-    ldx #<TASK3
-    jsr STARTJOB
-
-    lda #>TASK4
-    ldx #<TASK4
-    jsr STARTJOB
-
-    jmp TASK1
-
 ;*********************************************************
 ; TASK No 1
 
 .proc TASK1
     jsr CONSINIT
+    ldy #0
+    lda #30
+    jsr STARTTIMER
 
     ; --- pętla zadania głównego czyli obsługa paska stanu i konsoli
 main_loop:
     jsr print_number_of_jobs
-    jsr SCANKBD
-    jsr print_keyboard_state
+    jsr print_event_state
+    lda #$18                    ;czekam na zdarzenie zmiany stanu klawiatury i od zegara 0 (zegar 0 służy do zmiany stanu kursora)
+    jsr SELECT                  ;po powrocie w A będą flagi zdarzeń, które rzeczywiście miały miejsce
+    sta LASTEVENTS
 
+    lda #$08
+    bit LASTEVENTS
+    beq :+
+    jsr KBDEVENT
     jsr analyse_keys
-    ldy #1
-    jsr WAIT
-    dec BLINKCNT
-    bne :+
+    jmp main_loop
+
+:   lda #$10
+    bit LASTEVENTS
+    beq main_loop
     jsr CRSRNEG
-:   jmp main_loop
+    jmp main_loop
 .endproc
 
 .proc print_number_of_jobs
     lda #'j'-$40
-    sta $6002
-    lda #'o'-$40
-    sta $6003
-    lda #'b'-$40
-    sta $6004
-    lda #'s'-$40
-    sta $6005
+    sta $6007
     lda #':'
-    sta $6005
+    sta $6008
     jsr JOBS
     txa
     clc
     adc #'0'
-    sta $6008
+    sta $600B
     lda #'/'
-    sta $6007
+    sta $600A
     tya
     clc
     adc #'0'
-    sta $6006
+    sta $6009
     rts
 .endproc
 
-.proc print_keyboard_state
-    ldx #12+0*2
-    lda NEWKEYS+0
-    jsr output_hex
-    ldx #12+1*2
-    lda NEWKEYS+1
-    jsr output_hex
-    ldx #12+2*2
-    lda NEWKEYS+2
-    jsr output_hex
-    ldx #12+3*2
-    lda NEWKEYS+3
-    jsr output_hex
-    ldx #12+4*2
-    lda NEWKEYS+4
-    jsr output_hex
-    ldx #12+5*2
-    lda NEWKEYS+5
-    jsr output_hex
-    ldx #12+6*2
-    lda NEWKEYS+6
-    jsr output_hex
-    ldx #12+7*2
-    lda NEWKEYS+7
-    jsr output_hex
-    ldx #13+8*2
-    lda KEYMOD
+.proc print_event_state
+    ldx #13
+    lda EVENTS
     jsr output_hex
     rts
 .endproc

@@ -1,10 +1,10 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program dbuft
 
-.import INITT, SETDBT, SWAPSCRT, CLST, FILLCT, TXTPAGE, JiffyClock
+.import IRQ, INITT, SETDBT, SWAPSCRT, CLST, FILLCT, TXTPAGE, JiffyClock
 
 .segment "ZEROPAGE":zeropage
-NPTR:  .res 2
+NPTR:   .res 2
 NRSLUP: .res 1
 
 .segment "DATA"
@@ -24,7 +24,13 @@ KONCOWKI:  .byte 100,111,121,98,248,247,227,160
 
     ldx #$FF
     txs
-    cld                 ; i nigdy więcej nie włączaj
+    cld               ; i nigdy więcej nie włączaj
+    sei
+    lda #<IRQ
+    sta $FFFE        ;Hardware IRQ Interrupt Vector
+    lda #>IRQ
+    sta $FFFF
+    cli
     jsr INITT
     lda #1
     jsr SETDBT        ;turn on double buffer

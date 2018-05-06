@@ -27,17 +27,32 @@ które sam uruchomił. Oczywiście w przyszłości trzeba będzie wprowadzić id
 procesów i przypisywać je do zasobów zajętych przez dany proces. 
 
 Przy tak mocnych założeniach upraszczających, unixowa funkcja `select` (`poll`, `epoll`) czy
-windowsowe `WaitForEvent` upraszcza się do podania bitowej maski zdarzeń na jakie
+windowsowe `WaitForMultipleObjects` upraszcza się do podania bitowej maski zdarzeń na jakie
 czeka dany proces. Będzie to oznaczało, że deskryptor zadania wydłuży się zaledwie
 o 1 bajt, w którym będą zdefiniowane flagi sześciu zdarzeń. Jeśli jakieś zdarzenie
 (lub kilka na raz) zaistnieje to proces dostanie bitowe znaczniki (np. w akumulatorze),
-informujące co się stało.
+informujące co się stało. Ta wersja funkcji `SELECT` nie obsługuje przekroczenia czasu,
+jednak zamknięcie zadania, który czeka na zdarzenia spowoduje przerwanie funkcji `SELECT`
+z pustymi flagami zdarzeń (akumulator będzie miał wartość 0). Jedynym sposobem na
+zrobienie przekroczenia czasu jest wykorzystanie dodatkowego zegara programowego, który
+wygeneruje odpowiednie zdarzenie.
 
 Robię jeszcze jedno założenie upraszczające, które polega na tym, że przełączanie
 zadań ma prawo wykonać się w kontekście dowolnego zdania. To znaczy, że funkcja
 `select` nie przełączy się na proces T0 a dopiero potem na inne zadanie, które 
 także doczekało się na swoje zdarzenie. Takie podejście wydaje się rozsądne bo
 minimalizuje przełączanie zadań.
+
+Podobnie ja w ćwiczeniu nr 1, tu także konsola pozwala wydać tylko dwie komendy:
+
+1. STOP <job> zamyka proces podanego typu, <job> może być literą S, M albo T (odpowiednio
+   słońce, księżyc, wieżowce),
+2. START <job> uruchamia proces podanego typu, <job> jak wyżej.
+
+Błędna komenda zwróci ERROR, dobra komenda wykona się bez żadnego komunikatu.
+
+W tej wersji programu `sunandmoon` nie ma już zjawiska zmiany prędkości animacji
+w zależności od ilości aktualnie pracujących procesów.
 
 Taki model nie gwarantuje szybkiej reakcji na zdarzenie bo jeśli proces zostanie
 obudzony zdarzeniem i będzie długo wykonywał swoje zdania (powyżej 1/60 sekundy)

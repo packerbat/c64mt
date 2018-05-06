@@ -1,7 +1,7 @@
 ;----------------------------
 ; Procedura STARTTIMER uruchamia zegar wskazany przez rejestr Y
-; Odstęp czasu podaje się w A w 1/60 sekundy (czyli A=60 oznacza wyzwolenie)
-; zegara co 1 sekundę
+; Odstęp czasu podaje się w A w 1/60 sekundy (czyli A=60 oznacza wyzwolenie
+; zegara co 1 sekundę)
 ;
 ; Z
 ;
@@ -17,7 +17,7 @@
 ; stack: 0
 ; reentrant: yes
 
-.export STARTTIMER, TIMERS_RELOAD, TIMERS
+.export STARTTIMER, STOPTIMER, TIMERS_RELOAD, TIMERS
 .import EVENTS, BITSOFF
 
 .segment "DATA"

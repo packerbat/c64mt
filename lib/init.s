@@ -33,10 +33,6 @@
     sta $FFFC        ;Hardware COLD START Vector
     lda #>COLDSTART
     sta $FFFD
-    lda #<IRQ
-    sta $FFFE        ;Hardware IRQ Interrupt Vector
-    lda #>IRQ
-    sta $FFFF
     cli
 
     lda #$08

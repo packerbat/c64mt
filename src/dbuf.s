@@ -1,12 +1,11 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.import INIT, SETDB, CLS, SWAPSCR, XP, YP, XK, YK, LINE
-.import tablica_naroznikow
+.import IRQ, INIT, SETDB, CLS, SWAPSCR, XP, YP, XK, YK, LINE, tablica_naroznikow
 
 .segment "ZEROPAGE"
-NPOS:  .res 1
-NPTR:  .res 2
+NPOS:   .res 1
+NPTR:   .res 2
  
 .segment "CODE"
     .org $0801
@@ -20,6 +19,12 @@ NPTR:  .res 2
     ldx #$FF
     txs
     cld                 ; i nigdy więcej nie włączaj
+    sei
+    lda #<IRQ
+    sta $FFFE        ;Hardware IRQ Interrupt Vector
+    lda #>IRQ
+    sta $FFFF
+    cli
     jsr INIT
     lda #1
     jsr SETDB         ;turn on double buffer

@@ -1,15 +1,17 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.export TASK3
-.import WAIT, BITSOFF, BITSON, MOONMUTEX
+.export TASK3, MOONSLOT
+.import WAIT, BITSOFF, BITSON, TASK_STATE, CURRTASK
 
 SPRITENR = 1
 SHAPENR = $A1
 
 .segment "ZEROPAGE":zeropage
 SPPTR:     .word 0
-STATUSPTR: .word 0
+
+.segment "DATA"
+MOONSLOT:   .byte 0
 
 .segment "RODATA"
 .linecont +
@@ -391,9 +393,8 @@ BALISTA2: .word 0,220
 
 .segment "CODE"
 .proc TASK3
-    inc MOONMUTEX
-    stx STATUSPTR
-    sty STATUSPTR+1
+    lda CURRTASK
+    sta MOONSLOT
 
     ; init sprite
     ldx #62         ;copy sprite
@@ -455,8 +456,8 @@ BALISTA2: .word 0,220
     lda #>BALISTA2
     sta SPPTR+1
 
-:   ldy #0
-    lda (STATUSPTR),y
+:   ldy MOONSLOT
+    lda TASK_STATE,y
     and #$40          ;test stop request
     beq :--
 
@@ -466,10 +467,12 @@ koniec_MOON:
     and BITSOFF,x
     sta $D015
 
-    lda (STATUSPTR),y
+    ldy MOONSLOT
+    lda TASK_STATE,y
     ora #$20
-    sta (STATUSPTR),y
-    dec MOONMUTEX
+    sta TASK_STATE,y
+    lda #0
+    sta MOONSLOT
 
 :   nop
     jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event

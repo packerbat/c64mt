@@ -1,15 +1,17 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.export TASK2
-.import WAIT, BITSOFF, BITSON, SUNMUTEX
+.export TASK2, SUNSLOT
+.import WAIT, BITSOFF, BITSON, TASK_STATE, CURRTASK
 
 SPRITENR = 0
 SHAPENR = $A0
 
 .segment "ZEROPAGE":zeropage
 SPPTR:   .word 0
-STATUSPTR: .word 0
+
+.segment "DATA"
+SUNSLOT:   .byte 0
 
 .segment "RODATA"
 .linecont +
@@ -392,9 +394,8 @@ BALISTA1: .word 0,220
 
 .segment "CODE"
 .proc TASK2
-    inc SUNMUTEX
-    stx STATUSPTR
-    sty STATUSPTR+1
+    lda CURRTASK
+    sta SUNSLOT
 
     ; init sprite
     ldx #62         ;copy sprite
@@ -456,8 +457,8 @@ BALISTA1: .word 0,220
     lda #>BALISTA1
     sta SPPTR+1
 
-:   ldy #0
-    lda (STATUSPTR),y
+:   ldy SUNSLOT
+    lda TASK_STATE,y
     and #$40          ;test stop request
     beq :--
 
@@ -467,10 +468,12 @@ koniec_SUN:
     and BITSOFF,x
     sta $D015
 
-    lda (STATUSPTR),y
+    ldy SUNSLOT
+    lda TASK_STATE,y
     ora #$20
-    sta (STATUSPTR),y
-    dec SUNMUTEX
+    sta TASK_STATE,y
+    lda #0
+    sta SUNSLOT
 
 :   nop
     jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event

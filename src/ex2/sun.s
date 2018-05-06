@@ -1,15 +1,20 @@
 ;---------------------------------------------------------- 
 ; sekwencja uruchamiająca program bees
 
-.export TASK2
-.import WAIT, BITSOFF, BITSON, SUNMUTEX, STARTTIMER, TASK_EVENTS, EVENTS
+.export TASK2, SUNSLOT
+.import BITSOFF, BITSON, STARTTIMER, STOPTIMER, SELECT, JOBDONE, TASK_STATE, CURRTASK
 
 SPRITENR = 0
 SHAPENR = $A0
 
 .segment "ZEROPAGE":zeropage
 SPPTR:   .word 0
-STATUSPTR: .word 0
+
+.segment "DATA"
+SUNSLOT:   .byte 0
+
+.segment "BSS"
+LASTEVENTS:   .res 1
 
 .segment "RODATA"
 .linecont +
@@ -392,9 +397,8 @@ BALISTA1: .word 0,220
 
 .segment "CODE"
 .proc TASK2
-    inc SUNMUTEX
-    stx STATUSPTR
-    sty STATUSPTR+1
+    lda CURRTASK
+    sta SUNSLOT
 
     ; init sprite
     ldx #62         ;copy sprite
@@ -427,8 +431,6 @@ BALISTA1: .word 0,220
     ora BITSON,x
     sta $D01B
 
-    lda #$20
-    sta TASK_EVENTS+1     ;czekam na zdarzenie przepełnienia zegara 1 !!!!!!!!!!
     ldy #1
     lda #6
     jsr STARTTIMER
@@ -438,14 +440,20 @@ BALISTA1: .word 0,220
     lda #>BALISTA1
     sta SPPTR+1
 
-:   jsr SETSPRITEPOS
-
-    lda #$DF
-    and EVENTS
-    sta EVENTS
+main_loop_SUN:
+    jsr SETSPRITEPOS
     lda #$20
-:   bit EVENTS
-    beq :-
+    jsr SELECT                  ;po powrocie w A będą flagi zdarzeń, które rzeczywiście miały miejsce
+    sta LASTEVENTS
+
+    lda #$20
+    bit LASTEVENTS
+    beq koniec_SUN              ;wyszedł z SELECT ale nie ustawił flagi TIMER2 więc to KILL
+
+    ldy SUNSLOT
+    lda TASK_STATE,y
+    and #$40          ;test stop request
+    bne koniec_SUN
 
     clc
     lda SPPTR       ;przesuwam wskaźnik do następnej pozycji w tablicy trajektorii
@@ -466,25 +474,18 @@ BALISTA1: .word 0,220
     sta SPPTR
     lda #>BALISTA1
     sta SPPTR+1
-
-:   ldy #0
-    lda (STATUSPTR),y
-    and #$40          ;test stop request
-    beq :---
+:   jmp main_loop_SUN
 
 koniec_SUN:
     ldx #SPRITENR   ;X = sprit number
     lda $D015       ;enable sprite
     and BITSOFF,x
     sta $D015
-
-    lda (STATUSPTR),y
-    ora #$20
-    sta (STATUSPTR),y
-    dec SUNMUTEX
-
-:   nop
-    jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event
+    ldy #1
+    jsr STOPTIMER
+    lda #0
+    sta SUNSLOT
+    jmp JOBDONE
 .endproc
 
 .proc SETSPRITEPOS

@@ -2,21 +2,22 @@
 ; Proces wyświetlający przesuwające się wieżowce
 ; 
 
-.export TASK4
-.import WAIT, TXTPAGE, TOWNMUTEX
+.export TASK4, TOWNSLOT
+.import WAIT, TXTPAGE, TASK_STATE, CURRTASK
 
 .segment "DATA"
 SLUPKI:   .byte 8,8,8,0,12,12,4,4,4,4,   4,0,7,7,7,0,8,8,8,8,   0,14,14,14,16,16,16,13,13,13,   0,6,6,6,6,5,5,5,5,0
 
 .segment "ZEROPAGE":zeropage
 NPTR:  .res 2
-STATUSPTR: .word 0
+
+.segment "DATA"
+TOWNSLOT:   .byte 0
 
 .segment "CODE"
 .proc TASK4
-    inc TOWNMUTEX
-    stx STATUSPTR
-    sty STATUSPTR+1
+    lda CURRTASK
+    sta TOWNSLOT
     jsr CLRWIN
 
     lda #%11111111      ;zmiana litery $3f na segment wieżowca
@@ -34,15 +35,17 @@ STATUSPTR: .word 0
 :   ldy #14
     jsr WAIT
     jsr SCROLL_SCEEN
-    ldy #0
-    lda (STATUSPTR),y
+    ldy TOWNSLOT
+    lda TASK_STATE,y
     and #$40            ;test stop request, sprawdzanie tego to dobra wola procesu, jeśli nie sprawdza to nie zakończy
     beq :-
 
-    lda (STATUSPTR),y
+    ldy TOWNSLOT
+    lda TASK_STATE,y
     ora #$20
-    sta (STATUSPTR),y
-    dec TOWNMUTEX
+    sta TASK_STATE,y
+    lda #0
+    sta TOWNSLOT
 
 :   nop
     jmp :-              ;w przyszłości ta pętla będzie zastąpiona przez event

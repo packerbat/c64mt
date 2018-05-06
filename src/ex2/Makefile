@@ -1,6 +1,6 @@
 EXAMPLES = samevents.prg
 TARGETS = $(EXAMPLES)
-OBJS = samevents.o irq.o sun.o moon.o town.o
+OBJS = samevents.o irq.o console.o sun.o moon.o town.o
 
 all: $(TARGETS)
 

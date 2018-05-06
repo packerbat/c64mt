@@ -23,7 +23,7 @@
 .include "../../lib/globals.inc"
 
 .export IRQ, CIA1IRQMask, CIA1IRQState, VICIRQMask, VICIRQState, JiffyClock
-.export CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE
+.export CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE, TASK_EVENTS
 .import COLDSTART
 
 .segment "DATA"
@@ -43,6 +43,8 @@ TASK_REGSP:   .res MAXTASKS,$FF
 TASK_STATE:   .byte $80           ; STATE: b7=1 active, b7=0 empty, zerowe zadanie nigdy nie może być puste i nie można go zakończyć
               .res MAXTASKS-1,0   ;        b6=1 request for stop
                                   ;        b5=1 task terminated
+TASK_EVENTS:  .res MAXTASKS,0     ;watość różna od 0 oznacza, że proces jest zawieszony do czasu zajścia wskazanych tu zdarzeń
+
 CURRTASK:     .byte 0             ;numer bieżącego zadania w zakresie 0..3 (na razie)
 
 
