@@ -5,9 +5,9 @@
 .export TASK1
 .import STARTTIMER, SELECT, EVENTS, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
 .import JOBS, MVCRSR, CHROUT, PRINTHEX, KBDEVENT, GETKEY, NEWKEYS, KEYMOD, EVENTS
-.import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
+.import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, LINELEN
 .import CMDLINE, CHKCMD, CURROW, CURCOL, STROUT, CONSLINEOUT, STARTTIMER
-.import SUNSLOT, MOONSLOT, TOWNSLOT
+.import SUNSLOT, MOONSLOT, TOWNSLOT, output_hex
 
 .segment "RODATA"
 CMDSTAB:   .byte 4,"stop",5,"start",0
@@ -70,31 +70,25 @@ main_loop:
 
 .proc print_event_state
     ldx #13
+    lda #('e'-$40)
+    sta $6000,x
+    inx
+    lda #':'
+    sta $6000,x
+    inx
     lda EVENTS
     jsr output_hex
-    rts
-.endproc
-
-.proc output_hex
-    pha
-    lsr
-    lsr
-    lsr
-    lsr
-    cmp #10
-    bcc :+
-    adc #6
-:   adc #'0'
+    lda #' '
     sta $6000,x
     inx
-    pla
-    and #$0F
-    cmp #10
-    bcc :+
-    adc #6
-:   adc #'0'
+    lda #('m'-$40)
     sta $6000,x
     inx
+    lda #':'
+    sta $6000,x
+    inx
+    lda KEYMOD
+    jsr output_hex
     rts
 .endproc
 

@@ -4,7 +4,7 @@ OBJS = nmi.o coldstart.o startjob.o stopjob.o jobs.o copypages.o init.o initt.o 
        nrm.o clst.o fillct.o swapscrt.o setdbt.o \
        bitsoff.o bitson.o wait.o mvcrsr.o chrout.o strout.o printhex.o kbdqueue.o kbdevent.o scankbd.o \
        consinit.o consgetchar.o consmoveup.o conscrsr.o conskeys.o chkcmd.o conslineout.o \
-       starttimer.o select.o jobdone.o
+       starttimer.o select.o jobdone.o div24.o
        # volume.o text.o draw.o fill.o \
        #play.o voice.o scroll.o up.o shift.o shape.o sprite.o move.o
 

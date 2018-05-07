@@ -20,7 +20,7 @@
 ;
 .segment "CODE"
 .proc CONSKEYS
-    cmp #96                      ;pomijam wciśnięcia
+    cmp #96                      ;pomijam puszczenia
     bcs nie_dotyczy_konsoli
     pha
     jsr CRSROFF
@@ -98,7 +98,7 @@ moze_del:
     cmp #20
     bne nie_dotyczy_konsoli
     lda LINELEN
-    beq :++
+    beq :+++
     ldx CURCOL
     cpx LINELEN     ;jestem na ostatnim znaku, tylko skracam i nic nie przesuwam
     beq :++

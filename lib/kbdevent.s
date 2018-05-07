@@ -24,8 +24,10 @@
 ; ringbuffer tracimy jedną pozycję bo inaczej stan pusty i całkowicie zapełniony
 ; są nie rozróżnialne
 ;
-; Procedura nie analizuje klawiszy specjalnych jak shift, ctrl, commodore.
-; Również nie obsługuje klawiszy samopowtarzalnych
+; Procedura najpierw analizuje klawiszy specjalnych jak shift, ctrl, commodore
+; ale do dlaszej analizy wykorzystywany jest tylko modyfikator SHIFT (bez znaczenia lewy czy prawy)
+;
+; Procedura nie obsługuje klawiszy samopowtarzalnych
 ;
 ; W jednym wywołaniu procedury może pojawić się wiele klawiszy jednocześnie. Mogą również
 ; pojawić się fałszywe klawisze gdy wciśniemy wiele klawiszy na raz.
@@ -69,22 +71,22 @@ TMPBIT:     .res 1
 TMPVAL:     .res 1
 
 .segment "RODATA"
-KBDROWS:      .byte  16,'q',  8,' ','2',  4,$5F,'1'
-              .byte '/',$5E,'=',  2, 19,';','*',$5C
-              .byte ',','@',':','.','-','l','p','+'
-              .byte 'n','o','k','m','0','j','i','9'
-              .byte 'v','u','h','b','8','g','y','7'
-              .byte 'x','t','f','c','6','d','r','5'
+KBDROWS:      .byte  17, 25, 23, 21, 27, 29, 13, 20
               .byte   1,'e','s','z','4','a','w','3'
-              .byte  17, 25, 23, 21, 27, 29, 13, 20
-KBDSHIFTROWS: .byte  16,'q',  8,' ','"',  4,$5F,'!'
-              .byte '?',$5E,'=',  2, 19,']','*',$5C
-              .byte '<','@','[','>','-','l','p','+'
-              .byte 'n','o','k','m','0','j','i',')'
-              .byte 'v','u','h','b','(','g','y',$27
-              .byte 'x','t','f','c','&','d','r','%'
+              .byte 'x','t','f','c','6','d','r','5'
+              .byte 'v','u','h','b','8','g','y','7'
+              .byte 'n','o','k','m','0','j','i','9'
+              .byte ',','@',':','.','-','l','p','+'
+              .byte '/',$5E,'=',  2, 19,';','*',$5C
+              .byte  16,'q',  8,' ','2',  4,$5F,'1'
+KBDSHIFTROWS: .byte  18, 26, 24, 22, 28, 30, 13, 20
               .byte   1,'e','s','z','$','a','w','#'
-              .byte  18, 26, 24, 22, 28, 30, 13, 20
+              .byte 'x','t','f','c','&','d','r','%'
+              .byte 'v','u','h','b','(','g','y',$27
+              .byte 'n','o','k','m','0','j','i',')'
+              .byte '<','@','[','>','-','l','p','+'
+              .byte '?',$5E,'=',  2, 19,']','*',$5C
+              .byte  16,'q',  8,' ','"',  4,$5F,'!'
 
 .segment "CODE"
 .proc KBDEVENT
@@ -104,7 +106,7 @@ KBDSHIFTROWS: .byte  16,'q',  8,' ','"',  4,$5F,'!'
     ; --- zanim będę skanował klawisze muszę sprawdzić stan modyfikatorów
     lda LASTKEYS+1      ;SHIFT LEFT
     and #$80
-    bne :+
+    beq :+
     lda #$7F
     and LASTKEYS+1
     sta LASTKEYS+1
@@ -113,14 +115,14 @@ KBDSHIFTROWS: .byte  16,'q',  8,' ','"',  4,$5F,'!'
     sta KEYMOD
     lda NEWKEYS+1
     and #$80
-    beq :+
+    bne :+
     lda #$01
     ora KEYMOD
     sta KEYMOD
 
 :   lda LASTKEYS+6      ;SHIFT RIGHT
     and #$10
-    bne :+
+    beq :+
     lda #$EF
     and LASTKEYS+6
     sta LASTKEYS+6
@@ -129,14 +131,14 @@ KBDSHIFTROWS: .byte  16,'q',  8,' ','"',  4,$5F,'!'
     sta KEYMOD
     lda NEWKEYS+6
     and #$10
-    beq :+
+    bne :+
     lda #$02
     ora KEYMOD
     sta KEYMOD
 
 :   lda LASTKEYS+7      ;CTRL
     and #$04
-    bne :+
+    beq :+
     lda #$FB
     and LASTKEYS+7
     sta LASTKEYS+7
@@ -145,14 +147,14 @@ KBDSHIFTROWS: .byte  16,'q',  8,' ','"',  4,$5F,'!'
     sta KEYMOD
     lda NEWKEYS+7
     and #$04
-    beq :+
+    bne :+
     lda #$04
     ora KEYMOD
     sta KEYMOD
 
 :   lda LASTKEYS+7      ;COMMODORE
     and #$20
-    bne :+
+    beq :+
     lda #$DF
     and LASTKEYS+7
     sta LASTKEYS+7
@@ -161,14 +163,14 @@ KBDSHIFTROWS: .byte  16,'q',  8,' ','"',  4,$5F,'!'
     sta KEYMOD
     lda NEWKEYS+7
     and #$08
-    beq :+
+    bne :+
     lda #$08
     ora KEYMOD
     sta KEYMOD
 
-:   lda #<KBDROWS
+:   lda #<(KBDROWS+8*7)
     sta KBFPTR
-    lda #>KBDROWS
+    lda #>(KBDROWS+8*7)
     sta KBFPTR+1
     ldx #7
     stx TMPBIT
@@ -193,7 +195,7 @@ next_row:
     bpl :+              ;na najstarszym bicie nie ma zmian
 
     lda TMPVAL
-    and #$80            ;znacznik wciśnięcia b7=1
+    and #$80            ;znacznik puszczenia b7=1
     ora (KBFPTR),y
     jsr PUTKEY
     ldx TMPBIT          ;bo PUTKEY zniszczyło X
@@ -204,12 +206,12 @@ next_row:
     bne :--             ;jest jeszcze jakiś bit zmian
 
 brak_zmian:
-    clc
-    lda #8
-    adc KBFPTR
+    sec
+    lda KBFPTR
+    sbc #8
     sta KBFPTR
-    lda #0
-    adc KBFPTR+1
+    lda KBFPTR+1
+    sbc #0
     sta KBFPTR+1
     dec TMPBIT
 

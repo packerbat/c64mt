@@ -11,7 +11,7 @@
 
 .include "../../lib/globals.inc"
 
-.import IRQ, INITT, CLST, FILLCT, TXTPAGE, STARTJOB, TASK1, TASK2, TASK3, TASK4
+.import IRQ, INITT, CLST, FILLCT, TXTPAGE, STARTJOB, TASK1, TASK2, TASK3, TASK4, IdleClock, IdleCounter
 
 .segment "CODE"
     .org $0801
@@ -62,8 +62,11 @@
     jsr STARTJOB
 
     ; --- teraz zaczyna się zerowy proces IDLE, którego nie można zabić.
-    ; tu można zrobić licznik obiegów pętli, który będzie wyznaczał stopień
-    ; nudy mikroprocesora.
-:   nop
+    ; jedyną rzeczą którą robi IDLE jest inkrementowanie licznika nudy
+:   inc IdleClock
+    bne :-
+    inc IdleClock+1
+    bne :-
+    inc IdleClock+2
     jmp :-
 

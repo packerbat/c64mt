@@ -8,16 +8,11 @@
 ;
 ; Przyjazne dla C bo nie używają rejestru X
 
-.export CRSROFF, CRSRON, CRSRNEG, BLINKCNT
+.export CRSROFF, CRSRON, CRSRNEG
 .import CRSPTR:zeropage, CURCOL, TXTPAGE
-
-.segment "BSS"
-BLINKCNT: .res 1
 
 .segment "CODE"
 .proc CRSROFF
-    lda #20
-    sta BLINKCNT
     ldy CURCOL
     lda (CRSPTR),y
     and #$BF
@@ -36,8 +31,6 @@ BLINKCNT: .res 1
 .endproc
 
 .proc CRSRON
-    lda #20
-    sta BLINKCNT
     ldy CURCOL
     lda (CRSPTR),y
     ora #$40
@@ -56,8 +49,6 @@ BLINKCNT: .res 1
 .endproc
 
 .proc CRSRNEG
-    lda #20
-    sta BLINKCNT
     ldy CURCOL
     lda (CRSPTR),y
     eor #$40

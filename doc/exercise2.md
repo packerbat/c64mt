@@ -54,10 +54,20 @@ Błędna komenda zwróci ERROR, dobra komenda wykona się bez żadnego komunikat
 W tej wersji programu `sunandmoon` nie ma już zjawiska zmiany prędkości animacji
 w zależności od ilości aktualnie pracujących procesów.
 
-Taki model nie gwarantuje szybkiej reakcji na zdarzenie bo jeśli proces zostanie
-obudzony zdarzeniem i będzie długo wykonywał swoje zdania (powyżej 1/60 sekundy)
-to dopiero nowe przerwanie IRQ zmusi komputer do zmiany zadania. Jeśli takich
-długich procesów jest wiele to opóźnienie może być bardzo duże. Warto pomyśleć
+W tym ćwiczeniu można już dodać czasowania czasu bezczynności. Proces bezczynności
+jest przymusowo zadaniem 0 (nie można go zabić). W poprzednim ćwiczeniu to konsola
+była zadaniem 0, a obecnie jest zadaniem 1. Procedury systemowe pozwalają zakończyć
+zadanie 1 ale nie pozwala na to komenda `STOP`. Szacowanie czasu bezczynności jest 
+zrobione orientacyjnie. Zmierzyłem, że jeśli pracuje tylko proces bezczynności (nawet
+konsola nie pracuje) to licznik osiąga wartość średnią $18C94 w ciągu sekundy. Ta wartość została
+przyjęta za 100%. Gdy pracuje tylko konsola to bezczynność jest na poziomie 99% a gdy 
+pracują wszystkie procesy to bezczynność jest na poziomie 89%.
+
+Przedstawiony tu model nie gwarantuje szybkiej reakcji na zdarzenie bo jeśli zdarzy
+się wiele rzeczy jednocześnie (czyli między jednym przerwaniem a następnym) to 
+procesy będą budzone w pierścieniu, a gdy już wszystkie zdarzenia zostaną obsłużone
+to system będzie wykonywał (również w pierścieniu) zadania długotrwałe (czyli wszystkie
+te zadania, które są aktywne ale nie czekają na zdarzenie w funkcji SELECT). Warto pomyśleć
 o priorytetach zdarzeń. Na przykład przerwanie zegarowe jest mniej ważne od przerwania
 rastrowego bo w przerwaniu rastrowym konieczna jest natychmiastowa zmiana położenia
 sprita w procesie multiplikacji spritów. Jeśli reakcja nie będzie natychmiastowa

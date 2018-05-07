@@ -22,9 +22,10 @@
 
 .include "../../lib/globals.inc"
 
-.export IRQ, CIA1IRQMask, CIA1IRQState, VICIRQMask, VICIRQState, JiffyClock, EVENTS
+.export IRQ, CIA1IRQMask, CIA1IRQState, VICIRQMask, VICIRQState, JiffyClock, EVENTS, IdleClock, IdleCounter
 .export CURRTASK, TASK_REGPCL, TASK_REGPCH, TASK_REGA, TASK_REGX, TASK_REGY, TASK_REGPS, TASK_REGSP, TASK_STATE, TASK_EVENTS
-.import COLDSTART, TIMERS_RELOAD, TIMERS, NEWKEYS, LASTKEYS
+.import COLDSTART, TIMERS_RELOAD, TIMERS, NEWKEYS, LASTKEYS, output_hex, output_dec
+.import DIV24, NUMERATOR, DIVISOR, REMAINDER
 
 .segment "DATA"
 CIA1IRQMask:   .byte $7F        ;wstaw 0 do wszytkich masek przerwania CIA#2
@@ -47,6 +48,8 @@ TASK_STATE:   .byte $80           ; STATE: b7=1 active, b7=0 empty, zerowe zadan
 TASK_EVENTS:  .res MAXTASKS,0     ;watość różna od 0 oznacza, że proces jest zawieszony do czasu zajścia wskazanych tu zdarzeń
 
 CURRTASK:     .byte 0             ;numer bieżącego zadania w zakresie 0..3 (na razie)
+IdleClock:    .byte 0,0,0         ;24-bitowy licznik nudzenia się mikroprocesora
+IdleCounter:  .byte 60            ;licznik odmierza 60 impulsów
 
 .segment "BSS"
 JiffyClock:    .res 4           ;32-bitowy licznik przerwań IRQ
@@ -195,7 +198,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+0
 
     lda #$FD
@@ -203,7 +205,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+1
 
     lda #$FB
@@ -211,7 +212,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+2
 
     lda #$F7
@@ -219,7 +219,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+3
 
     lda #$EF
@@ -227,7 +226,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+4
 
     lda #$DF
@@ -235,7 +233,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+5
 
     lda #$BF
@@ -243,7 +240,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+6
 
     lda #$7F
@@ -251,7 +247,6 @@ przerwanie_od_CIA1:
 :   lda $DC01
     cmp $DC01
     bne :-
-    eor #$FF            ; teraz mam 1 tam gdzie wciśnięto i 0 na niewciśniętych klawiszach
     sta NEWKEYS+7
 
     lda #$FF
@@ -298,8 +293,84 @@ przerwanie_od_CIA1:
     tya
     pha
 
+    dec IdleCounter
+    beq :+
+    jmp :++
+:   lda #60
+    sta IdleCounter
+
+    ;100*counter = 64*counter+32*counter+4*counter = ((2*counter+counter)*8+counter)*4
+    lda IdleClock
+    sta NUMERATOR
+    lda IdleClock+1
+    sta NUMERATOR+1
+    lda IdleClock+2
+    sta NUMERATOR+2
+    asl NUMERATOR
+    rol NUMERATOR+1
+    rol NUMERATOR+2
+    clc
+    lda NUMERATOR
+    adc IdleClock
+    sta NUMERATOR
+    lda NUMERATOR+1
+    adc IdleClock+1
+    sta NUMERATOR+1
+    lda NUMERATOR+2
+    adc IdleClock+2
+    sta NUMERATOR+2         ;NUMERATOR = IdleCounter * 3
+    asl NUMERATOR
+    rol NUMERATOR+1
+    rol NUMERATOR+2
+    asl NUMERATOR
+    rol NUMERATOR+1
+    rol NUMERATOR+2
+    asl NUMERATOR
+    rol NUMERATOR+1
+    rol NUMERATOR+2         ;NUMERATOR = IdleCounter * 24
+    clc
+    lda NUMERATOR
+    adc IdleClock
+    sta NUMERATOR
+    lda NUMERATOR+1
+    adc IdleClock+1
+    sta NUMERATOR+1
+    lda NUMERATOR+2
+    adc IdleClock+2
+    sta NUMERATOR+2         ;NUMERATOR = IdleCounter * 25
+    asl NUMERATOR
+    rol NUMERATOR+1
+    rol NUMERATOR+2
+    asl NUMERATOR
+    rol NUMERATOR+1
+    rol NUMERATOR+2         ;NUMERATOR = IdleCounter * 100
+
+    lda #$9A
+    sta DIVISOR
+    lda #$8C
+    sta DIVISOR+1
+    lda #$01
+    sta DIVISOR+2
+    jsr DIV24
+
+    ldx #34
+    lda #('i'-$40)
+    sta $6000,x
+    inx
+    lda #':'
+    sta $6000,x
+    inx
+    lda NUMERATOR
+    jsr output_dec
+    lda #'%'
+    sta $6000,x
+    lda #0
+    sta IdleClock
+    sta IdleClock+1
+    sta IdleClock+2
+
     ; --- najpierw zamykam zadania, które potwierdziły swóje zamknięcie
-    ldy #MAXTASKS-1
+:   ldy #MAXTASKS-1
 :   lda TASK_STATE,y
     bpl :+              ;pomijam puste sloty
     and #$20
@@ -381,7 +452,7 @@ activate_task_in_y:
     adc #6
     sta TASK_REGSP,y    ; SP wskazuje na adres przed skokiem dlatego podnoszę o 6
 
-    ; --- wznowienie znalezionego zdania
+    ; --- wznowienie znalezionego zadania
     ldy CURRTASK
     ldx TASK_REGSP,y
     txs                 ;od tej pory działamy na stosie nowego zadania

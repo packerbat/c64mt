@@ -13,9 +13,12 @@
 
 .import IRQ, INITT, CLST, FILLCT, TXTPAGE, JiffyClock, WAIT, STARTJOB, STOPJOB, TASK2, TASK3, TASK4
 .import JOBS, MVCRSR, CHROUT, PRINTHEX, BITSOFF, SCANKBD, GETKEY, KEYMOD, NEWKEYS
-.import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, BLINKCNT, LINELEN
+.import CONSINIT, CONSMOVEUP, CONSKEYS, CRSRON, CRSROFF, CRSRNEG, LINELEN
 .import CMDLINE, CHKCMD, CURROW, CURCOL, CRSPTR:zeropage, STROUT, CONSLINEOUT
 .import SUNSLOT, MOONSLOT, TOWNSLOT
+
+.segment "BSS"
+BLINKCNT: .res 1
 
 .segment "RODATA"
 CMDSTAB:   .byte 4,"stop",5,"start",0
@@ -153,7 +156,7 @@ main_loop:
     lsr
     cmp #10
     bcc :+
-    adc #6
+    sbc #57
 :   adc #'0'
     sta $6000,x
     inx
@@ -161,7 +164,7 @@ main_loop:
     and #$0F
     cmp #10
     bcc :+
-    adc #6
+    sbc #57
 :   adc #'0'
     sta $6000,x
     inx
@@ -193,6 +196,8 @@ cos_jest_w_buforze_klawiatury:
     ldy #24
     jsr MVCRSR
     jsr CONSLINEOUT
+    lda #20
+    sta BLINKCNT
     jsr CRSRON
     jmp get_next_key
 .endproc
